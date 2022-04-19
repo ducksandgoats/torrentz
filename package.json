@@ -1,0 +1,20 @@
+{
+  "name": "torrentz",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bencode": "^2.0.2",
+    "busboy": "^1.6.0",
+    "ed25519-supercop": "^2.0.1",
+    "fs-extra": "^10.1.0",
+    "simple-sha1": "^3.1.0",
+    "webtorrent": "^1.8.13"
+  }
+}
