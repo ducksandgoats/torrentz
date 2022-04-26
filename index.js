@@ -95,6 +95,11 @@ class Torrentz {
     this._readyToGo = true
   }
 
+  errName(err, text){
+    err.name = text
+    return err
+  }
+
   delayTimeOut (timeout, data, res = false) {
     return new Promise((resolve, reject) => { setTimeout(() => { if (res) { resolve(data) } else { reject(data) } }, timeout) })
   }
@@ -208,7 +213,7 @@ class Torrentz {
 
     if(checkHash.test(id)){
       const checkTorrent = await Promise.race([
-        this.delayTimeOut(useTimeout, new Error(id + ' took too long, it timed out'), false),
+        this.delayTimeOut(useTimeout, this.errName(new Error(id + ' took too long, it timed out'), 'ErrorTimeout'), false),
         new Promise((resolve, reject) => {
           this.webtorrent.add(id, { path: folderPath, destroyStoreOnDestroy: true }, torrent => {
             resolve(torrent)
@@ -230,7 +235,7 @@ class Torrentz {
         }
 
         const checkTorrent = await Promise.race([
-          this.delayTimeOut(useTimeout, new Error(id + ' took too long, it timed out'), false),
+          this.delayTimeOut(useTimeout, this.errName(new Error(id + ' took too long, it timed out'), 'ErrorTimeout'), false),
           new Promise((resolve, reject) => {
             this.webtorrent.seed(folderPath, { destroyStoreOnDestroy: true }, torrent => {
               resolve(torrent)
@@ -238,7 +243,7 @@ class Torrentz {
           })
         ])
         const checkProperty = await Promise.race([
-          this.delayTimeOut(this._timeout, new Error(id + ' property took too long, it timed out, please try again with only the keypair without the folder'), false),
+          this.delayTimeOut(this._timeout, this.errName(new Error(id + ' property took too long, it timed out, please try again with only the keypair without the folder'), 'ErrorTimeout'), false),
           this.ownData(id, checkTorrent.infoHash)
         ]).catch(error => {
           this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false })
@@ -256,7 +261,7 @@ class Torrentz {
         return checkTorrent
       } else {
         const checkProperty = await Promise.race([
-          this.delayTimeOut(this._timeout, new Error(id + ' property took too long, it timed out'), false),
+          this.delayTimeOut(this._timeout, this.errName(new Error(id + ' property took too long, it timed out'), 'ErrorTimeout'), false),
           this.resolveFunc(id)
         ])
     
@@ -276,7 +281,7 @@ class Torrentz {
         }
     
         const checkTorrent = await Promise.race([
-          this.delayTimeOut(useTimeout, new Error(checkProperty.address + ' took too long, it timed out'), false),
+          this.delayTimeOut(useTimeout, this.errName(new Error(checkProperty.address + ' took too long, it timed out'), 'ErrorTimeout'), false),
           new Promise((resolve, reject) => {
             this.webtorrent.add(checkProperty.infohash, { path: dataPath, destroyStoreOnDestroy: true }, torrent => {
               resolve(torrent)
@@ -298,7 +303,7 @@ class Torrentz {
         throw new Error('folder does not exist')
       }
       const checkTorrent = await Promise.race([
-        this.delayTimeOut(useTimeout, new Error(id + ' took too long, it timed out'), false),
+        this.delayTimeOut(useTimeout, this.errName(new Error(id + ' took too long, it timed out'), 'ErrorTimeout'), false),
         new Promise((resolve, reject) => {
           this.webtorrent.seed(folderPath, { destroyStoreOnDestroy: true }, torrent => {
             resolve(torrent)
@@ -340,7 +345,7 @@ class Torrentz {
       const folderPath = path.join(this._storage, id.address)
       await fs.emptyDir(folderPath)
       // await Promise.race([
-      //   this.delayTimeOut(this._timeout, new Error('took too long to write to disk'), false),
+      //   this.delayTimeOut(this._timeout, this.errName(new Error('took too long to write to disk'), 'ErrorTimeout'), false),
       //   this.handleFormData(folderPath, headers, data)
       // ])
       const additionalData = await this.handleFormData(folderPath, headers, data)
@@ -353,7 +358,7 @@ class Torrentz {
         throw new Error('data could not be written to new torrent')
       }
       const checkTorrent = await Promise.race([
-        this.delayTimeOut(useTimeout, new Error('torrent took too long, it timed out'), false),
+        this.delayTimeOut(useTimeout, this.errName(new Error('torrent took too long, it timed out'), 'ErrorTimeout'), false),
         new Promise((resolve, reject) => {
           this.webtorrent.seed(folderPath, { destroyStoreOnDestroy: true }, torrent => {
             resolve(torrent)
@@ -361,7 +366,7 @@ class Torrentz {
         })
       ])
       const checkProperty = await Promise.race([
-        this.delayTimeOut(this._timeout, new Error(id.address + ' property took too long, it timed out, please try again with only the keypair without the folder'), false),
+        this.delayTimeOut(this._timeout, this.errName(new Error(id.address + ' property took too long, it timed out, please try again with only the keypair without the folder'), 'ErrorTimeout'), false),
         this.publishFunc(id.address, id.secret, { ih: checkTorrent.infoHash }, count)
       ]).catch(error => {
         this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false })
@@ -409,7 +414,7 @@ class Torrentz {
       const authorPath = path.join(this._author, id.title)
       await fs.emptyDir(folderPath)
       // await Promise.race([
-      //   this.delayTimeOut(this._timeout, new Error('took too long to write to disk'), false),
+      //   this.delayTimeOut(this._timeout, this.errName(new Error('took too long to write to disk'), 'ErrorTimeout'), false),
       //   this.handleFormData(folderPath, headers, data)
       // ])
       const additionalData = await this.handleFormData(folderPath, headers, data)
@@ -422,7 +427,7 @@ class Torrentz {
         throw new Error('data could not be written to new torrent')
       }
       const checkTorrent = await Promise.race([
-        this.delayTimeOut(useTimeout, new Error('torrent took too long, it timed out'), false),
+        this.delayTimeOut(useTimeout, this.errName(new Error('torrent took too long, it timed out'), 'ErrorTimeout'), false),
         new Promise((resolve, reject) => {
           this.webtorrent.seed(folderPath, { destroyStoreOnDestroy: true }, torrent => {
             resolve(torrent)
