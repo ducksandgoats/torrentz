@@ -631,4 +631,4 @@ class Torrentz {
   }
 }
 
-module.exports = {Torrentz, verify: ed.verify}
+module.exports = Torrentz
