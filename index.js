@@ -1,3 +1,4 @@
+const WebTorrent = require('webtorrent')
 const fs = require('fs-extra')
 const path = require('path')
 const sha1 = require('simple-sha1')
@@ -42,20 +43,7 @@ class Torrentz {
       fs.ensureDirSync(this._author)
     }
 
-    if(!finalOpts.webtorrent){
-      throw new Error('need an instance of webtorrent')
-    }
-
-    this.webtorrent = finalOpts.webtorrent
-
-    // this.webtorrent = (() => {
-    //   if(finalOpts.webtorrent){
-    //     return finalOpts.webtorrent
-    //   } else {
-    //     const WebTorrent = require('webtorrent')
-    //     return new WebTorrent({ dht: { verify: ed.verify } })
-    //   }
-    // })(finalOpts)
+    this.webtorrent = new WebTorrent({ dht: { verify: ed.verify } })
     
     this.webtorrent.on('error', error => {
       console.error(error)
