@@ -43,7 +43,14 @@ class Torrentz {
       fs.ensureDirSync(this._author)
     }
 
-    this.webtorrent = new WebTorrent({ dht: { verify: ed.verify } })
+    this.webtorrent = ((finalOpts) => {
+      if(finalOpts.webtorrent){
+        finalOpts.webtorrent.dht._verify = ed.verify
+        return finalOpts.webtorrent
+      } else {
+        return new WebTorrent({ dht: { verify: ed.verify } })
+      }
+    })(finalOpts)
     
     this.webtorrent.on('error', error => {
       console.error(error)
