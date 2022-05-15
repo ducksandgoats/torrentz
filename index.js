@@ -317,7 +317,7 @@ class Torrentz {
       checkTorrent.infohash = checkTorrent.infoHash
       checkTorrent.title = id
       checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
-      await fs.writeFile(path.join(authorPath, checkTorrent.title), checkTorrent.infohash)
+      await fs.writeFile(authorPath, checkTorrent.infohash)
       return checkTorrent
     } else {
       throw new Error('invalid identifier was used')
@@ -441,7 +441,7 @@ class Torrentz {
       checkTorrent.own = true
       checkTorrent.infohash = checkTorrent.infoHash
       checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
-      await fs.writeFile(path.join(authorPath, checkTorrent.title), checkTorrent.infohash)
+      await fs.writeFile(authorPath, checkTorrent.infohash)
       return { torrent: checkTorrent, infohash: checkTorrent.infohash, title: checkTorrent.title }
     }
   }
