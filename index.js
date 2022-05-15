@@ -323,7 +323,7 @@ class Torrentz {
       throw new Error('invalid identifier was used')
     }
   }
-  async publishTorrent(update, id, count, headers, data, checkTimeout = 0){
+  async publishTorrent(update, id, count, headers, data, checkTimeout = 0, empty = null){
     const useTimeout = checkTimeout ? checkTimeout : this._timeout
     if(update){
       if (!id || !id.address || !id.secret) {
@@ -343,7 +343,9 @@ class Torrentz {
         }
       }
       const folderPath = path.join(this._storage, id.address)
-      await fs.emptyDir(folderPath)
+      if(empty){
+        await fs.emptyDir(folderPath)
+      }
       // await Promise.race([
       //   this.delayTimeOut(this._timeout, this.errName(new Error('took too long to write to disk'), 'ErrorTimeout'), false),
       //   this.handleFormData(folderPath, headers, data)
@@ -412,7 +414,9 @@ class Torrentz {
       }
       const folderPath = path.join(this._storage, id.title)
       const authorPath = path.join(this._author, id.title)
-      await fs.emptyDir(folderPath)
+      if(empty){
+        await fs.emptyDir(folderPath)
+      }
       // await Promise.race([
       //   this.delayTimeOut(this._timeout, this.errName(new Error('took too long to write to disk'), 'ErrorTimeout'), false),
       //   this.handleFormData(folderPath, headers, data)
