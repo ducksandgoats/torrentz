@@ -74,8 +74,8 @@ class Torrentz {
     const dir = await fs.readdir(this._author)
     for(const data of dir){
       const useData = await fs.readFile(path.join(this._author, data))
-      const parsedData = JSON.parse(useData.toString())
       try {
+        const parsedData = JSON.parse(useData.toString())
         await this.saveData(parsedData)
       } catch (err) {
         console.error(err)
@@ -345,6 +345,8 @@ class Torrentz {
       const folderPath = path.join(this._storage, id.address)
       if(empty){
         await fs.emptyDir(folderPath)
+      } else {
+        await fs.ensureDir(folderPath)
       }
       // await Promise.race([
       //   this.delayTimeOut(this._timeout, this.errName(new Error('took too long to write to disk'), 'ErrorTimeout'), false),
@@ -416,6 +418,8 @@ class Torrentz {
       const authorPath = path.join(this._author, id.title)
       if(empty){
         await fs.emptyDir(folderPath)
+      } else {
+        await fs.ensureDir(folderPath)
       }
       // await Promise.race([
       //   this.delayTimeOut(this._timeout, this.errName(new Error('took too long to write to disk'), 'ErrorTimeout'), false),
