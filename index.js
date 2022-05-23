@@ -7,27 +7,18 @@ const bencode = require('bencode')
 const busboy = require('busboy')
 const { Readable } = require('stream')
 
-const BTPK_PREFIX = 'urn:btpk:'
-
 // saves us from saving secret keys(saving secret keys even encrypted secret keys is something i want to avoid)
 // with this function which was taken from the bittorrent-dht package
 // we save only the signatures when we first publish a BEP46 torrent
-function encodeSigData (msg) {
-  const ref = { seq: msg.seq, v: msg.v }
-  if (msg.salt) ref.salt = msg.salt
-  return bencode.encode(ref).slice(1, -1)
-}
-
-// setting up constants
-const checkHash = /^[a-fA-F0-9]{40}$/
-const checkAddress = /^[a-fA-F0-9]{64}$/
-const checkTitle = /^[a-zA-Z0-9]/
-const defOpts = { folder: __dirname, storage: 'storage', author: 'author', current: true, timeout: 60000 }
 
 class Torrentz {
   constructor (opts = {}) {
+    const defOpts = { folder: __dirname, storage: 'storage', author: 'author', current: true, timeout: 60000 }
     const finalOpts = { ...defOpts, ...opts }
     this._timeout = finalOpts.timeout
+    this.checkHash = /^[a-fA-F0-9]{40}$/
+    this.checkAddress = /^[a-fA-F0-9]{64}$/
+    this.checkTitle = /^[a-zA-Z0-9]/
 
     finalOpts.folder = path.resolve(finalOpts.folder)
     fs.ensureDirSync(finalOpts.folder)
@@ -43,18 +34,12 @@ class Torrentz {
       fs.ensureDirSync(this._author)
     }
 
-    this.webtorrent = ((finalOpts) => {
-      if(finalOpts.webtorrent){
-        finalOpts.webtorrent.dht._verify = ed.verify
-        return finalOpts.webtorrent
-      } else {
-        return new WebTorrent({ dht: { verify: ed.verify } })
-      }
-    })(finalOpts)
+    this.webtorrent = new WebTorrent({ dht: { verify: ed.verify } })
     
     this.webtorrent.on('error', error => {
       console.error(error)
     })
+    this.BTPK_PREFIX = 'urn:btpk:'
     this._readyToGo = true
 
     // run the start up function
@@ -66,6 +51,12 @@ class Torrentz {
         this.keepUpdated().then(data => console.log('routine update had an resolve', data)).catch(error => console.error('routine update had a reject', error))
       }
     }, 1800000)
+  }
+
+  encodeSigData (msg) {
+    const ref = { seq: msg.seq, v: msg.v }
+    if (msg.salt) ref.salt = msg.salt
+    return bencode.encode(ref).slice(1, -1)
   }
 
   // keep data active in the dht, runs every hour
@@ -117,7 +108,7 @@ class Torrentz {
     data = JSON.parse(data.toString())
 
     const signatureBuff = Buffer.from(data.sig, 'hex')
-    const encodedSignatureData = encodeSigData({ seq: data.sequence, v: { ih: infoHash, ...data.stuff } })
+    const encodedSignatureData = this.encodeSigData({ seq: data.sequence, v: { ih: infoHash, ...data.stuff } })
     const addressBuff = Buffer.from(data.address, 'hex')
 
     if (infoHash !== data.infohash || !ed.verify(signatureBuff, encodedSignatureData, addressBuff)) {
@@ -145,14 +136,14 @@ class Torrentz {
         })
       })
     })
-    if (!checkHash.test(getData.v.ih.toString('utf-8')) || !Number.isInteger(getData.seq)) {
+    if (!this.checkHash.test(getData.v.ih.toString('utf-8')) || !Number.isInteger(getData.seq)) {
       throw new Error('data is invalid')
     }
     for (const prop in getData.v) {
       getData.v[prop] = getData.v[prop].toString('utf-8')
     }
     const { ih, ...stuff } = getData.v
-    return { magnet: `magnet:?xs=${BTPK_PREFIX}${address}`, address, infohash: ih, sequence: getData.seq, stuff, sig: getData.sig.toString('hex'), from: getData.id.toString('hex') }
+    return { magnet: `magnet:?xs=${this.BTPK_PREFIX}${address}`, address, infohash: ih, sequence: getData.seq, stuff, sig: getData.sig.toString('hex'), from: getData.id.toString('hex') }
   }
 
   // publish an infohash under a public key address in the dht
@@ -162,7 +153,7 @@ class Torrentz {
         throw new Error('text data must be strings')
       }
     }
-    if (!checkHash.test(text.ih)) {
+    if (!this.checkHash.test(text.ih)) {
       throw new Error('must have infohash')
     }
     if (!address || !secret) {
@@ -184,7 +175,7 @@ class Torrentz {
       seq = count === null ? 0 : count
     }
 
-    const buffSig = ed.sign(encodeSigData({ seq, v }), buffAddKey, buffSecKey)
+    const buffSig = ed.sign(this.encodeSigData({ seq, v }), buffAddKey, buffSecKey)
 
     const putData = await new Promise((resolve, reject) => {
       this.webtorrent.dht.put({ k: buffAddKey, v, seq, sig: buffSig }, (putErr, hash, number) => {
@@ -196,7 +187,7 @@ class Torrentz {
       })
     })
     const { ih, ...stuff } = text
-    main = { magnet: `magnet:?xs=${BTPK_PREFIX}${address}`, address, infohash: ih, sequence: seq, stuff, sig: buffSig.toString('hex'), ...putData }
+    main = { magnet: `magnet:?xs=${this.BTPK_PREFIX}${address}`, address, infohash: ih, sequence: seq, stuff, sig: buffSig.toString('hex'), ...putData }
     await fs.writeFile(authorPath, JSON.stringify(main))
     return main
   }
@@ -211,7 +202,7 @@ class Torrentz {
     const authorPath = path.join(this._author, id)
     const useTimeout = checkTimeout ? checkTimeout : this._timeout
 
-    if(checkHash.test(id)){
+    if(this.checkHash.test(id)){
       const checkTorrent = await Promise.race([
         this.delayTimeOut(useTimeout, this.errName(new Error(id + ' took too long, it timed out'), 'ErrorTimeout'), false),
         new Promise((resolve, reject) => {
@@ -228,7 +219,7 @@ class Torrentz {
       checkTorrent.infohash = checkTorrent.infoHash
       checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
       return checkTorrent
-    } else if(checkAddress.test(id)){
+    } else if(this.checkAddress.test(id)){
       if(await fs.pathExists(authorPath)){
         if (!await fs.pathExists(folderPath)) {
           throw new Error('folder does not exist')
@@ -298,7 +289,7 @@ class Torrentz {
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
         return checkTorrent
       }
-    } else if(checkTitle.test(id)){
+    } else if(this.checkTitle.test(id)){
       if (!await fs.pathExists(folderPath)) {
         throw new Error('folder does not exist')
       }
@@ -629,12 +620,12 @@ class Torrentz {
 
         const xs = parsed.searchParams.get('xs')
 
-        const isMutableLink = xs && xs.startsWith(BTPK_PREFIX)
+        const isMutableLink = xs && xs.startsWith(this.BTPK_PREFIX)
 
         if (!isMutableLink) {
           return ''
         } else {
-          return xs.slice(BTPK_PREFIX.length)
+          return xs.slice(this.BTPK_PREFIX.length)
         }
       } catch (error) {
         console.error(error)
