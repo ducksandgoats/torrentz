@@ -328,7 +328,7 @@ class Torrentz {
   async publishTorrent(gen, id, count, headers, data, checkTimeout = 0, empty = null){
     const useTimeout = checkTimeout ? checkTimeout : this._timeout
     if(gen){
-      if (!id.address || !id.secret) {
+      if (!id || !id.address || !id.secret) {
         id = this.createKeypair()
       } else {
         if(this.checkId.has(id.address)){
