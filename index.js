@@ -175,7 +175,7 @@ class Torrentz {
       main = JSON.parse(main.toString())
       seq = main.sequence + 1
     } else {
-      seq = count === null ? 0 : count
+      seq = count ? count : 0
     }
 
     const buffSig = ed.sign(this.encodeSigData({ seq, v }), buffAddKey, buffSecKey)
@@ -325,10 +325,10 @@ class Torrentz {
       throw new Error('invalid identifier was used')
     }
   }
-  async publishTorrent(update, id, count, headers, data, checkTimeout = 0, empty = null){
+  async publishTorrent(gen, id, count, headers, data, checkTimeout = 0, empty = null){
     const useTimeout = checkTimeout ? checkTimeout : this._timeout
-    if(update){
-      if (!id || !id.address || !id.secret) {
+    if(gen){
+      if (!id.address || !id.secret) {
         id = this.createKeypair()
       } else {
         if(this.checkId.has(id.address)){
@@ -394,29 +394,10 @@ class Torrentz {
       return { torrent: checkTorrent, address: id.address, secret: id.secret }
     } else {
 
-      if(id.sub){
-        if(this.checkId.has(id.sub)){
-          this.checkId.delete(id.sub)
-        }
-        const subTorrent = this.findTheTorrent(id.sub)
-        if(subTorrent){
-          await new Promise((resolve, reject) => {
-            this.webtorrent.remove(subTorrent.infoHash, {destroyStore: false}, error => {
-              if(error){
-                reject(error)
-              } else {
-                resolve()
-              }
-            })
-          })
-        }
-        await fs.remove(path.join(this._storage, id.sub))
+      if(this.checkId.has(id)){
+        this.checkId.delete(id)
       }
-
-      if(this.checkId.has(id.title)){
-        this.checkId.delete(id.title)
-      }
-      const activeTorrent = this.findTheTorrent(id.title)
+      const activeTorrent = this.findTheTorrent(id)
       if(activeTorrent){
         await new Promise((resolve, reject) => {
           this.webtorrent.remove(activeTorrent.infoHash, {destroyStore: false}, error => {
@@ -428,8 +409,8 @@ class Torrentz {
           })
         })
       }
-      const folderPath = path.join(this._storage, id.title)
-      const authorPath = path.join(this._author, id.title)
+      const folderPath = path.join(this._storage, id)
+      const authorPath = path.join(this._author, id)
       if(empty){
         await fs.emptyDir(folderPath)
       } else {
@@ -458,13 +439,13 @@ class Torrentz {
       ])
       const mainPath = path.join(checkTorrent.path, checkTorrent.name)
       checkTorrent.folder = folderPath
-      checkTorrent.title = id.title
+      checkTorrent.title = id
       checkTorrent.address = null
       checkTorrent.own = true
       checkTorrent.infohash = checkTorrent.infoHash
       checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
       await fs.writeFile(authorPath, checkTorrent.infohash)
-      this.checkId.set(id.title, checkTorrent)
+      this.checkId.set(id, checkTorrent)
       return { torrent: checkTorrent, infohash: checkTorrent.infohash, title: checkTorrent.title }
     }
   }
