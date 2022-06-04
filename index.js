@@ -110,13 +110,18 @@ class Torrentz {
     // parse the data file
     data = JSON.parse(data.toString())
 
+    if(infoHash !== data.infohash){
+      throw new Error('infohash does not match with the given infohash')
+    }
+
     const signatureBuff = Buffer.from(data.sig, 'hex')
     const encodedSignatureData = this.encodeSigData({ seq: data.sequence, v: { ih: infoHash, ...data.stuff } })
     const addressBuff = Buffer.from(data.address, 'hex')
 
-    if (infoHash !== data.infohash || !ed.verify(signatureBuff, encodedSignatureData, addressBuff)) {
+    if (!ed.verify(signatureBuff, encodedSignatureData, addressBuff)) {
       throw new Error('data does not match signature')
     }
+
     return data
   }
 
@@ -266,7 +271,7 @@ class Torrentz {
         ])
     
         checkProperty.folder = folderPath
-        const dataPath = path.join(checkProperty.folder, checkProperty.infoHash)
+        const dataPath = path.join(checkProperty.folder, checkProperty.infohash)
     
         // if current option is true, then if the infohash for the address is brand new then empty the directory and download the new infohash
         // if the current option is false, then at least make sure the main folder which is named with the public key address exists
@@ -391,7 +396,7 @@ class Torrentz {
       checkTorrent.own = true
       checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
       this.checkId.set(id.address, checkTorrent)
-      return { torrent: checkTorrent, address: id.address, secret: id.secret, infohash: checkTorrent.infohash }
+      return { torrent: checkTorrent, address: id.address, secret: id.secret, infohash: checkTorrent.infohash, sequence: checkTorrent.sequence }
     } else {
 
       if(this.checkId.has(id)){
