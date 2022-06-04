@@ -391,7 +391,7 @@ class Torrentz {
       checkTorrent.own = true
       checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
       this.checkId.set(id.address, checkTorrent)
-      return { torrent: checkTorrent, address: id.address, secret: id.secret }
+      return { torrent: checkTorrent, address: id.address, secret: id.secret, infohash: checkTorrent.infohash }
     } else {
 
       if(this.checkId.has(id)){
