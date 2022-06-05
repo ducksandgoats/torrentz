@@ -65,20 +65,7 @@ class Torrentz {
   // keep data active in the dht, runs every hour
   async keepUpdated () {
     this._readyToGo = false
-    const dir = await fs.readdir(this._author)
-    for (const torrent of this.webtorrent.torrents) {
-      if (torrent.address) {
-        if(dir.includes(torrent.address)){
-          dir.splice(dir.indexOf(torrent.address), 1)
-        }
-        try {
-          await this.saveData(torrent)
-        } catch (err) {
-          console.error(err)
-        }
-        await new Promise((resolve, reject) => setTimeout(resolve, 4000))
-      }
-    }
+    const dir = await (async () => {const test = await fs.readdir(this._author);return test.filter((data) => {return data.length === 64});})()
     for(const data of dir){
       const useData = await fs.readFile(path.join(this._author, data))
       try {
@@ -88,6 +75,16 @@ class Torrentz {
         console.error(err)
       }
       await new Promise((resolve, reject) => setTimeout(resolve, 4000))
+    }
+    for (const torrent of this.webtorrent.torrents) {
+      if (torrent.address && !torrent.own) {
+        try {
+          await this.saveData(torrent)
+        } catch (err) {
+          console.error(err)
+        }
+        await new Promise((resolve, reject) => setTimeout(resolve, 4000))
+      }
     }
     this._readyToGo = true
   }
