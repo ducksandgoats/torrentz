@@ -122,7 +122,17 @@ class Torrentz {
       throw new Error('data does not match signature')
     }
 
-    return data
+    const putData = await new Promise((resolve, reject) => {
+      this.webtorrent.dht.put({ k: addressBuff, v: {ih: data.infohash, ...data.stuff}, seq: data.sequence, sig: signatureBuff }, (putErr, hash, number) => {
+        if (putErr) {
+          reject(putErr)
+        } else {
+          resolve({ hash: hash.toString('hex'), number })
+        }
+      })
+    })
+
+    return {...data, ...putData}
   }
 
   // resolve public key address to an infohash
