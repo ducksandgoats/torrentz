@@ -336,13 +336,53 @@ class Torrentz {
       throw new Error('invalid identifier was used')
     }
   }
-  async publishTorrent(id, pathToData, keys, headers, data, opts = {}){
+  async publishTorrent(id, pathToData, headers, data, opts = {}){
     if(!opts){
       opts = {}
     }
     const useTimeout = opts.timeout ? opts.timeout * 1000 : this._timeout
-    if(keys){
-      if (!id || !id.address || !id.secret) {
+    if(id.title){
+      if(this.checkId.has(id.title)){
+        this.checkId.delete(id.title)
+      }
+      const activeTorrent = this.findTheTorrent(id.title)
+      if(activeTorrent){
+        await this.stopTorrent(activeTorrent, {destroyStore: false})
+      }
+      const folderPath = path.join(this._storage, id.title)
+      await fs.ensureDir(folderPath)
+
+      const dataPath = path.join(folderPath, pathToData)
+      const descriptionPath = path.join(this._description, id.title)
+      const useOpts = await (async () => {if(opts.opt){await fs.writeFile(descriptionPath, JSON.stringify(opts.opt));return opts.opt;}else if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else{return {};}})()
+      
+      const additionalData = headers ? await this.handleFormData(dataPath, headers, data) : await this.handleRegData(dataPath, data)
+      if(additionalData.length){
+        await fs.writeFile(path.join(folderPath, id.title + '-data.txt'), `${additionalData.map(file => {return `${file.key}: ${file.value}\n`})}`, {flag: 'a'})
+      }
+      // const checkFolderPath = await fs.readdir(folderPath, { withFileTypes: false })
+      // if (!checkFolderPath.length) {
+      //   await fs.remove(folderPath)
+      //   throw new Error('data could not be written to new torrent')
+      // }
+      const checkTorrent = await Promise.race([
+        this.delayTimeOut(useTimeout, this.errName(new Error('torrent took too long, it timed out'), 'ErrorTimeout'), false),
+        this.startTorrent(folderPath, { ...useOpts, destroyStoreOnDestroy: false })
+      ])
+
+      await fs.writeFile(path.join(this._author, id.title), JSON.stringify({infohash: checkTorrent.infoHash, title: id.title}))
+
+      const mainPath = path.join(checkTorrent.path, checkTorrent.name)
+      checkTorrent.folder = folderPath
+      checkTorrent.title = id.title
+      checkTorrent.address = null
+      checkTorrent.own = true
+      checkTorrent.infohash = checkTorrent.infoHash
+      checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
+      this.checkId.set(id.title, checkTorrent)
+      return { infohash: checkTorrent.infohash, title: checkTorrent.title, name: checkTorrent.name, length: checkTorrent.length }
+    } else {
+      if (!id.address || !id.secret) {
         id = this.createKeypair()
       } else {
         if(this.checkId.has(id.address)){
@@ -354,14 +394,12 @@ class Torrentz {
         }
       }
       const folderPath = path.join(this._storage, id.address)
+      await fs.ensureDir(folderPath)
+
       const dataPath = path.join(folderPath, pathToData)
       const descriptionPath = path.join(this._description, id.address)
       const useOpts = await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else if(opts.opt){await fs.writeFile(descriptionPath, JSON.stringify(opts.opt));return opts.opt;}else{return {};}})()
-      if(opts.empty){
-        await fs.emptyDir(folderPath)
-      } else {
-        await fs.ensureDir(folderPath)
-      }
+
       const additionalData = headers ? await this.handleFormData(dataPath, headers, data) : await this.handleRegData(dataPath, data)
       if(additionalData.length){
         await fs.writeFile(path.join(folderPath, id.address + '-data.txt'), `${additionalData.map(file => {return `${file.key}: ${file.value}\n`})}`, {flag: 'a'})
@@ -392,50 +430,7 @@ class Torrentz {
       checkTorrent.own = true
       checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
       this.checkId.set(id.address, checkTorrent)
-      return { torrent: checkTorrent, address: id.address, secret: id.secret, infohash: checkTorrent.infohash, sequence: checkTorrent.sequence }
-    } else {
-
-      if(this.checkId.has(id)){
-        this.checkId.delete(id)
-      }
-      const activeTorrent = this.findTheTorrent(id)
-      if(activeTorrent){
-        await this.stopTorrent(activeTorrent, {destroyStore: false})
-      }
-      const folderPath = path.join(this._storage, id)
-      const dataPath = path.join(folderPath, pathToData)
-      const descriptionPath = path.join(this._description, id.address)
-      const useOpts = await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else if(opts.opt){await fs.writeFile(descriptionPath, JSON.stringify(opts.opt));return opts.opt;}else{return {};}})()
-      if(opts.empty){
-        await fs.emptyDir(folderPath)
-      } else {
-        await fs.ensureDir(folderPath)
-      }
-      const additionalData = headers ? await this.handleFormData(dataPath, headers, data) : await this.handleRegData(dataPath, data)
-      if(additionalData.length){
-        await fs.writeFile(path.join(folderPath, id + '-data.txt'), `${additionalData.map(file => {return `${file.key}: ${file.value}\n`})}`, {flag: 'a'})
-      }
-      // const checkFolderPath = await fs.readdir(folderPath, { withFileTypes: false })
-      // if (!checkFolderPath.length) {
-      //   await fs.remove(folderPath)
-      //   throw new Error('data could not be written to new torrent')
-      // }
-      const checkTorrent = await Promise.race([
-        this.delayTimeOut(useTimeout, this.errName(new Error('torrent took too long, it timed out'), 'ErrorTimeout'), false),
-        this.startTorrent(folderPath, { ...useOpts, destroyStoreOnDestroy: false })
-      ])
-
-      await fs.writeFile(path.join(this._author, id), JSON.stringify({infohash: checkTorrent.infoHash, title: id}))
-
-      const mainPath = path.join(checkTorrent.path, checkTorrent.name)
-      checkTorrent.folder = folderPath
-      checkTorrent.title = id
-      checkTorrent.address = null
-      checkTorrent.own = true
-      checkTorrent.infohash = checkTorrent.infoHash
-      checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
-      this.checkId.set(id, checkTorrent)
-      return { torrent: checkTorrent, infohash: checkTorrent.infohash, title: checkTorrent.title }
+      return { address: id.address, secret: id.secret, infohash: checkTorrent.infohash, sequence: checkTorrent.sequence, name: checkTorrent.name, length: checkTorrent.length}
     }
   }
   async shredTorrent(id, pathToData, opts = {}){
@@ -456,14 +451,15 @@ class Torrentz {
     }
 
     const folderPath = path.join(this._storage, id)
-    const authorPath = path.join(this._author, id)
-    const descriptionPath = path.join(this._description, id)
+    if(!await fs.pathExists(folderPath)){
+      throw new Error('did not find any torrent data to delete')
+    }
 
     if(pathToData === '/'){
-      if(!await fs.pathExists(folderPath)){
-        throw new Error('did not find any torrent data to delete')
-      }
       await fs.remove(folderPath)
+
+      const authorPath = path.join(this._author, id)
+      const descriptionPath = path.join(this._description, id)
   
       if(await fs.pathExists(authorPath)){
         await fs.remove(authorPath)
@@ -472,14 +468,14 @@ class Torrentz {
       if(await fs.pathExists(descriptionPath)){
         await fs.remove(descriptionPath)
       }
+      return {torrent: true, data: true}
     } else {
       const dataPath = path.join(folderPath, pathToData)
       if(await fs.pathExists(dataPath)){
         await fs.remove(dataPath)
       }
+      return {torrent: false, data: true}
     }
-
-    return id
   }
   midTorrent(id, opts){
     return new Promise((resolve, reject) => {
