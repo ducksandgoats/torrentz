@@ -237,7 +237,10 @@ class Torrentz {
       const checkTorrent = await Promise.race([
         this.delayTimeOut(useTimeout, this.errName(new Error(id + ' took too long, it timed out'), 'ErrorTimeout'), false),
         this.midTorrent(id, { path: folderPath, destroyStoreOnDestroy: false })
-      ])
+      ]).catch(err => {
+        this.webtorrent.remove(id, { destroyStore: false })
+        throw err
+      })
       const mainPath = path.join(checkTorrent.path, checkTorrent.name)
       checkTorrent.folder = folderPath
       checkTorrent.address = null
@@ -301,7 +304,10 @@ class Torrentz {
         const checkTorrent = await Promise.race([
           this.delayTimeOut(useTimeout, this.errName(new Error(checkProperty.address + ' took too long, it timed out'), 'ErrorTimeout'), false),
           this.midTorrent(checkProperty.infohash, { path: dataPath, destroyStoreOnDestroy: false })
-        ])
+        ]).catch(err => {
+          this.webtorrent.remove(checkProperty.infohash, { destroyStore: false })
+          throw err
+        })
         // don't overwrite the torrent's infohash even though they will both be the same
         for (const prop in checkProperty) {
           checkTorrent[prop] = checkProperty[prop]
