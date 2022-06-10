@@ -1,4 +1,4 @@
-const WebTorrent = require('webtorrent-hybrid')
+const WebTorrent = require('webtorrent')
 const fs = require('fs-extra')
 const path = require('path')
 const sha1 = require('simple-sha1')
