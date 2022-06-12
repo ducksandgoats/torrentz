@@ -55,7 +55,7 @@ class Torrentz {
     // run the keepUpdated function every 1 hour, it keep the data active by putting the data back into the dht, don't run it if it is still working from the last time it ran the keepUpdated function
     this.session = setInterval(() => {
       if (this._readyToGo) {
-        this.keepUpdated().then(data => console.log('routine update had an resolve', data)).catch(error => console.error('routine update had a reject', error))
+        this.keepUpdated().then(data => console.log('amount of torrents:', data)).catch(error => console.error('routine update had a reject', error))
       }
     }, this._routine)
   }
@@ -91,6 +91,7 @@ class Torrentz {
       }
     }
     this._readyToGo = true
+    return this.webtorrent.torrents.length
   }
 
   errName(err, text){
