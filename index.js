@@ -13,7 +13,7 @@ const { Readable } = require('stream')
 
 class Torrentz {
   constructor (opts = {}) {
-    const defOpts = { folder: __dirname, storage: 'storage', author: 'author', description: 'description', current: true, timeout: 60000, routine: 1800000 }
+    const defOpts = { folder: __dirname, storage: 'storage', author: 'author', description: 'description', current: true, timeout: 60000, routine: 3600000 }
     const finalOpts = { ...defOpts, ...opts }
     this._timeout = finalOpts.timeout
     this._routine = finalOpts.routine
