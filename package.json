@@ -1,6 +1,6 @@
 {
   "name": "torrentz",
-  "version": "4.0.2",
+  "version": "4.0.3",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -12,9 +12,11 @@
   "dependencies": {
     "bencode": "^2.0.2",
     "busboy": "^1.6.0",
+    "create-torrent": "^5.0.2",
     "ed25519-supercop": "^2.0.1",
     "fs-extra": "^10.1.0",
     "simple-sha1": "^3.1.0",
-    "webtorrent": "^1.8.24"
+    "webtorrent": "^1.8.24",
+    "wrtc": "^0.4.7"
   }
 }

@@ -6,6 +6,8 @@ const ed = require('ed25519-supercop')
 const bencode = require('bencode')
 const busboy = require('busboy')
 const { Readable } = require('stream')
+const createTorrent = require('create-torrent')
+const wrtc = require('wrtc')
 
 // saves us from saving secret keys(saving secret keys even encrypted secret keys is something i want to avoid)
 // with this function which was taken from the bittorrent-dht package
@@ -39,7 +41,10 @@ class Torrentz {
       fs.ensureDirSync(this._description)
     }
 
-    this.webtorrent = new WebTorrent({ dht: { verify: ed.verify } })
+    this.webtorrent = new WebTorrent({ dht: { verify: ed.verify }, tracker: {wrtc} })
+
+    globalThis.WEBTORRENT_ANNOUNCE = createTorrent.announceList.map(arr => arr[0]).filter(url => url.indexOf('wss://') === 0 || url.indexOf('ws://') === 0)
+    globalThis.WRTC = wrtc
     
     this.webtorrent.on('error', error => {
       console.error(error)
@@ -120,8 +125,9 @@ class Torrentz {
       throw new Error('infohash does not match with the given infohash')
     }
 
+    const hashBuff = Buffer.from(infoHash, 'hex')
     const signatureBuff = Buffer.from(data.sig, 'hex')
-    const encodedSignatureData = this.encodeSigData({ seq: data.sequence, v: { ih: infoHash, ...data.stuff } })
+    const encodedSignatureData = this.encodeSigData({ seq: data.sequence, v: { ih: hashBuff, ...data.stuff } })
     const addressBuff = Buffer.from(data.address, 'hex')
 
     if (!ed.verify(signatureBuff, encodedSignatureData, addressBuff)) {
@@ -129,7 +135,7 @@ class Torrentz {
     }
 
     const putData = await new Promise((resolve, reject) => {
-      this.webtorrent.dht.put({ k: addressBuff, v: {ih: data.infohash, ...data.stuff}, seq: data.sequence, sig: signatureBuff }, (putErr, hash, number) => {
+      this.webtorrent.dht.put({ k: addressBuff, v: {ih: hashBuff, ...data.stuff}, seq: data.sequence, sig: signatureBuff }, (putErr, hash, number) => {
         if (putErr) {
           reject(putErr)
         } else {
@@ -160,13 +166,19 @@ class Torrentz {
         })
       })
     })
-    if (!this.checkHash.test(getData.v.ih.toString('utf-8')) || !Number.isInteger(getData.seq)) {
+
+    getData.v.ih = getData.v.ih.toString('hex')
+
+    const { ih, ...stuff } = getData.v
+    
+    for (const prop in stuff) {
+      stuff[prop] = stuff[prop].toString('utf-8')
+    }
+
+    if (!this.checkHash.test(ih)) {
       throw new Error('data is invalid')
     }
-    for (const prop in getData.v) {
-      getData.v[prop] = getData.v[prop].toString('utf-8')
-    }
-    const { ih, ...stuff } = getData.v
+
     return { magnet: `magnet:?xs=${this.BTPK_PREFIX}${address}`, address, infohash: ih, sequence: getData.seq, stuff, sig: getData.sig.toString('hex'), from: getData.id.toString('hex') }
   }
 
@@ -186,7 +198,15 @@ class Torrentz {
 
     const buffAddKey = Buffer.from(address, 'hex')
     const buffSecKey = secret ? Buffer.from(secret, 'hex') : null
-    const v = text
+    const v = {}
+
+    for(const prop in text){
+      if(prop === 'ih'){
+        v[prop] = Buffer.from(text[prop], 'hex')
+      } else {
+        v[prop] = Buffer.from(text[prop], 'utf-8')
+      }
+    }
 
     let main = null
     let seq = null
@@ -240,7 +260,10 @@ class Torrentz {
         this.midTorrent(id, { path: folderPath, destroyStoreOnDestroy: false })
       ]).catch(err => {
         try {
-          this.webtorrent.remove(id, { destroyStore: false })
+          const haveIt = this.webtorrent.get(id)
+          if(haveIt){
+            this.webtorrent.remove(haveIt.infoHash, { destroyStore: false })
+          }
         } catch (error) {
           console.error(error)
         }
@@ -270,13 +293,13 @@ class Torrentz {
         const checkProperty = await Promise.race([
           this.delayTimeOut(this._timeout, this.errName(new Error(id + ' property took too long, it timed out, please try again with only the keypair without the folder'), 'ErrorTimeout'), false),
           this.ownData(id, checkTorrent.infoHash)
-        ]).catch(error => {
+        ]).catch(err => {
           try {
             this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false }) 
           } catch (error) {
             console.error(error)
           }
-          throw error
+          throw err
         })
         // don't overwrite the torrent's infohash even though they will both be the same
         checkProperty.folder = folderPath
@@ -315,7 +338,10 @@ class Torrentz {
           this.midTorrent(checkProperty.infohash, { path: dataPath, destroyStoreOnDestroy: false })
         ]).catch(err => {
           try {
-            this.webtorrent.remove(checkProperty.infohash, { destroyStore: false }) 
+            const haveIt = this.webtorrent.get(checkProperty.infohash)
+            if(haveIt){
+              this.webtorrent.remove(haveIt.infoHash, { destroyStore: false }) 
+            }
           } catch (error) {
             console.error(error)
           }
@@ -435,13 +461,13 @@ class Torrentz {
       const checkProperty = await Promise.race([
         this.delayTimeOut(this._timeout, this.errName(new Error(id.address + ' property took too long, it timed out, please try again with only the keypair without the folder'), 'ErrorTimeout'), false),
         this.publishFunc(id.address, id.secret, { ih: checkTorrent.infoHash }, opts.count ? opts.count : null)
-      ]).catch(error => {
+      ]).catch(err => {
         try {
           this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false })
         } catch (error) {
           console.error(error)
         }
-        throw error
+        throw err
       })
       // don't overwrite the torrent's infohash even though they will both be the same
       checkProperty.folder = folderPath
@@ -571,7 +597,7 @@ class Torrentz {
   }
   stopTorrent(torrent, opts){
     return new Promise((resolve, reject) => {
-      this.webtorrent.remove(torrent.infoHash, opts, error => {
+      this.webtorrent.remove(torrent.infoHash, opts, (error) => {
         if(error){
           reject(error)
         } else {
@@ -657,7 +683,7 @@ class Torrentz {
   // keep the data we currently hold active by putting it back into the dht
   saveData (data) {
     return new Promise((resolve, reject) => {
-      this.webtorrent.dht.put({ k: Buffer.from(data.address, 'hex'), v: { ih: data.infohash || data.infoHash, ...data.stuff }, seq: data.sequence, sig: Buffer.from(data.sig, 'hex') }, (error, hash, number) => {
+      this.webtorrent.dht.put({ k: Buffer.from(data.address, 'hex'), v: { ih: Buffer.from(data.infohash || data.infoHash, 'hex'), ...data.stuff }, seq: data.sequence, sig: Buffer.from(data.sig, 'hex') }, (error, hash, number) => {
         if (error) {
           reject(error)
         } else {
@@ -671,6 +697,22 @@ class Torrentz {
   createKeypair () {
     const { publicKey, secretKey } = ed.createKeyPair(ed.createSeed())
     return { address: publicKey.toString('hex'), secret: secretKey.toString('hex') }
+  }
+
+  // obj to buff for stuff
+  stuffToBuff(data){
+    for(const prop in data){
+      data[prop] = Buffer.from(data[prop], 'utf-8')
+    }
+    return data
+  }
+
+  // buff to obj for stuff
+  stuffToObj(data){
+    for(const prop in data){
+      data[prop] = data[prop].toString('utf-8')
+    }
+    return data
   }
 }
 
