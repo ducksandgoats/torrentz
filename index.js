@@ -260,7 +260,7 @@ class Torrentz {
         this.midTorrent(id, { path: folderPath, destroyStoreOnDestroy: false })
       ]).catch(err => {
         try {
-          const haveIt = this.webtorrent.get(id)
+          const haveIt = this.findTheTorrent(id)
           if(haveIt){
             this.webtorrent.remove(haveIt.infoHash, { destroyStore: false })
           }
@@ -338,7 +338,7 @@ class Torrentz {
           this.midTorrent(checkProperty.infohash, { path: dataPath, destroyStoreOnDestroy: false })
         ]).catch(err => {
           try {
-            const haveIt = this.webtorrent.get(checkProperty.infohash)
+            const haveIt = this.findTheTorrent(checkProperty.infohash)
             if(haveIt){
               this.webtorrent.remove(haveIt.infoHash, { destroyStore: false }) 
             }
@@ -683,7 +683,7 @@ class Torrentz {
   // keep the data we currently hold active by putting it back into the dht
   saveData (data) {
     return new Promise((resolve, reject) => {
-      this.webtorrent.dht.put({ k: Buffer.from(data.address, 'hex'), v: { ih: Buffer.from(data.infohash || data.infoHash, 'hex'), ...data.stuff }, seq: data.sequence, sig: Buffer.from(data.sig, 'hex') }, (error, hash, number) => {
+      this.webtorrent.dht.put({ k: Buffer.from(data.address, 'hex'), v: { ih: Buffer.from(data.infohash || data.infoHash, 'hex'), ...this.stuffToBuff(data.stuff) }, seq: data.sequence, sig: Buffer.from(data.sig, 'hex') }, (error, hash, number) => {
         if (error) {
           reject(error)
         } else {
@@ -701,18 +701,20 @@ class Torrentz {
 
   // obj to buff for stuff
   stuffToBuff(data){
+    const obj = {}
     for(const prop in data){
-      data[prop] = Buffer.from(data[prop], 'utf-8')
+      obj[prop] = Buffer.from(data[prop], 'utf-8')
     }
-    return data
+    return obj
   }
 
   // buff to obj for stuff
   stuffToObj(data){
+    const obj = {}
     for(const prop in data){
-      data[prop] = data[prop].toString('utf-8')
+      obj[prop] = data[prop].toString('utf-8')
     }
-    return data
+    return obj
   }
 }
 
