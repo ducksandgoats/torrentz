@@ -41,6 +41,7 @@ class Torrentz {
       fs.ensureDirSync(this._description)
     }
 
+    // this.webtorrent = finalOpts.webtorrent ? finalOpts.webtorrent : new WebTorrent({ dht: { verify: ed.verify }, tracker: {wrtc} })
     this.webtorrent = new WebTorrent({ dht: { verify: ed.verify }, tracker: {wrtc} })
 
     globalThis.WEBTORRENT_ANNOUNCE = createTorrent.announceList.map(arr => arr[0]).filter(url => url.indexOf('wss://') === 0 || url.indexOf('ws://') === 0)
