@@ -42,7 +42,7 @@ class Torrentz {
     }
 
     // this.webtorrent = finalOpts.webtorrent ? finalOpts.webtorrent : new WebTorrent({ dht: { verify: ed.verify }, tracker: {wrtc} })
-    this.webtorrent = new WebTorrent({ dht: { verify: ed.verify }, tracker: {wrtc} })
+    this.webtorrent = new WebTorrent({ ...finalOpts, dht: { verify: ed.verify }, tracker: {wrtc} })
 
     globalThis.WEBTORRENT_ANNOUNCE = createTorrent.announceList.map(arr => arr[0]).filter(url => url.indexOf('wss://') === 0 || url.indexOf('ws://') === 0)
     globalThis.WRTC = wrtc
@@ -446,7 +446,7 @@ class Torrentz {
       const descriptionPath = path.join(this._description, id.address)
       const useOpts = await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else if(opts.opt){await fs.writeFile(descriptionPath, JSON.stringify(opts.opt));return opts.opt;}else{return {};}})()
 
-      const additionalData = headers ? await this.handleFormData(dataPath, headers, data) : await this.handleRegData(dataPath, data)
+      const additionalData = headers ? await this.handleFormData(dataPath, headers, data) : data ? await this.handleRegData(dataPath, data) : []
       if(additionalData.length){
         await fs.writeFile(path.join(folderPath, id.address + '-data.txt'), `${additionalData.map(file => {return `${file.key}: ${file.value}\n`})}`, {flag: 'a'})
       }
@@ -480,7 +480,7 @@ class Torrentz {
       checkTorrent.own = true
       checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
       this.checkId.set(id.address, checkTorrent)
-      return { address: id.address, secret: id.secret, infohash: checkTorrent.infohash, sequence: checkTorrent.sequence, name: checkTorrent.name, length: checkTorrent.length}
+      return { address: id.address, secret: id.secret, infohash: checkTorrent.infohash, sequence: checkTorrent.sequence, name: checkTorrent.name, length: checkTorrent.length, files: checkTorrent.files}
     }
   }
   async shredTorrent(id, pathToData, opts = {}){
