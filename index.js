@@ -242,12 +242,12 @@ class Torrentz {
       opts = {}
     }
     if(this.checkId.has(id)){
-      return pathToData === '/' ? this.checkId.get(id) : this.checkId.get(id).files.find(file => { return pathToData === file.urlPath })
+      return pathToData === '/' ? this.checkId.get(id) : pathToData.includes('.') ? this.checkId.get(id).files.find(file => { return pathToData === file.urlPath }) : mainData.files.filter(file => {return file.urlPath.includes(pathToData)})
     }
     const mainData = this.findTheTorrent(id)
     if(mainData){
       this.checkId.set(id, mainData)
-      return pathToData === '/' ? mainData : mainData.files.find(file => { return pathToData === file.urlPath })
+      return pathToData === '/' ? mainData : pathToData.includes('.') ? mainData.files.find(file => { return pathToData === file.urlPath }) : mainData.files.filter(file => {return file.urlPath.includes(pathToData)})
     }
 
     const folderPath = path.join(this._storage, id)
