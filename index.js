@@ -487,6 +487,18 @@ class Torrentz {
     if(!opts){
       opts = {}
     }
+
+    let kindOfId
+    if(this.checkAddress.test(id)){
+      kindOfId = 'address'
+    } else if(this.checkHash.test(id)){
+      kindOfId = 'infohash'
+    } else if(this.checkTitle.test(id)){
+      kindOfId = 'title'
+    } else {
+      throw new Error('id is not valid')
+    }
+
     if(this.checkId.has(id)){
       this.checkId.delete(id)
     }
@@ -518,14 +530,19 @@ class Torrentz {
       if(await fs.pathExists(descriptionPath)){
         await fs.remove(descriptionPath)
       }
-      return {torrent: true, data: true}
     } else {
+      const authorPath = path.join(this._author, id)
+      if(!await fs.pathExists(authorPath)){
+        throw new Error('Must be creator to delete any files or directories inside the torrent')
+      }
+
       const dataPath = path.join(folderPath, pathToData)
       if(await fs.pathExists(dataPath)){
         await fs.remove(dataPath)
       }
-      return {torrent: false, data: true}
     }
+
+    return {id, path: pathToData, type: kindOfId}
   }
   // async publishHash(id, hash){
   //   if (!id.address || !id.secret) {
