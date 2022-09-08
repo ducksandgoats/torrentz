@@ -278,7 +278,7 @@ class Torrentz {
 
         if(checkTorrent.infohash !== authorStuff.infohash){
           await fs.remove(authorPath)
-          await fs.writeFile(authorPath, JSON.stringify({infohash: checkTorrent.infoHash, title: checkTorrent.title}))
+          await fs.writeFile(path.join(this._author, checkTorrent.infohash), JSON.stringify({infohash: checkTorrent.infoHash, title: checkTorrent.title}))
         }
 
         this.checkId.set(id, checkTorrent)
