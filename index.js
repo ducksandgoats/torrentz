@@ -414,7 +414,7 @@ class Torrentz {
       if (!await fs.pathExists(authorPath)) {
         throw new Error('author does not exist')
       }
-      const authorStuff = JSON.parse((await fs.readFile(path.join(this._author, checkTorrent.infohash))).toString())
+      const authorStuff = JSON.parse((await fs.readFile(authorPath)).toString())
       const folderPath = path.join(this._storage, authorStuff.title)
 
       await fs.ensureDir(folderPath)
@@ -825,6 +825,5 @@ class Torrentz {
 module.exports = Torrentz
 
 /* 
-change additionalData in publishtorrent func to reflect new changes in handledata func
-add infohash publish to publishtorrent func
+comments
 */
