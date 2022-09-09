@@ -709,7 +709,7 @@ class Torrentz {
   findTheTorrent(id){
     let data = null
     for(const torrent of this.webtorrent.torrents){
-      if(torrent.address === id || torrent.infohash === id || torrent.title === id){
+      if(torrent.address === id || torrent.infohash === id){
         data = torrent
         break
       }
