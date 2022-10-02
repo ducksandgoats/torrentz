@@ -622,7 +622,7 @@ class Torrentz {
       // const isAuthorPath = await fs.pathExists(authorPath) ? null : null
       const authorStuff = await fs.pathExists(authorPath) ? JSON.parse((await fs.readFile(authorPath)).toString()) : null
       const folderPath = authorStuff ? path.join(this._storage, authorStuff.title) : path.join(this._storage, id)
-      const descriptionPath = authorStuff ? path.join(this._description, authorPath.title) : path.join(this._description, id)
+      const descriptionPath = authorStuff ? path.join(this._description, authorStuff.title) : path.join(this._description, id)
       const dataPath = path.join(folderPath, pathToData)
 
       if(!await fs.pathExists(folderPath)){
@@ -649,19 +649,33 @@ class Torrentz {
 
         const useOpts = descriptionPath ? await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else{return {};}})() : {}
 
-        const dataFromFolder = parseTorrent(
-          await new Promise((resolve, reject) => {
-            createTorrent(folderPath, ...useOpts, (err, torrent) => {
-              if(err){
-                reject(err)
-              } else if(torrent){
-                resolve(torrent)
-              } else {
-                reject(new Error('could not get torrent data from the folder'))
-              }
-            })
+        const dataFromTorrent = await new Promise((resolve, reject) => {
+          createTorrent(folderPath, useOpts, (err, torrent) => {
+            if(err){
+              reject(err)
+            } else if(torrent){
+              resolve(torrent)
+            } else {
+              reject(new Error('could not get torrent data from the folder'))
+            }
           })
-        )
+        })
+
+        const dataFromFolder = await (async () => {
+          try {
+            return parseTorrent(dataFromTorrent)
+          } catch (err) {
+            if(authorStuff){
+              await fs.remove(authorPath)
+            }
+            await fs.remove(folderPath)
+      
+            if(await fs.pathExists(descriptionPath)){
+              await fs.remove(descriptionPath)
+            }
+            throw err
+          }
+        })()
 
         if(dataFromFolder.infoHash !== authorStuff.infohash){
           await fs.remove(authorPath)
