@@ -834,6 +834,9 @@ class Torrentz {
     }
     return obj
   }
+  async listDirectory(){
+    return await fs.readdir(this._storage, {withFileTypes: true})
+  }
 }
 
 module.exports = Torrentz
