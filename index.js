@@ -837,26 +837,19 @@ class Torrentz {
   async listDirectory(data){
     return await fs.readdir(this._storage, {withFileTypes: data})
   }
-  async listAuthor(data){
-    if(data){
-      const listFiles = await fs.readdir(this._author, {withFileTypes: false})
-      const parseFiles = []
-      for(const test of listFiles){
-        const parseTest = JSON.parse((await fs.readFile(path.join(this._author, test))).toString())
-        if(parseTest.address){
-          parseTest.id = parseTest.address
-          parseTest.link = `bt://${parseTest.address}/`
-        } else if(parseTest.title){
-          parseTest.id = parseTest.title
-          parseTest.link = `bt://${parseTest.infohash}/`
-        }
-        parseFiles.push(parseTest)
+  async listAuthor(){
+    const listFiles = await fs.readdir(this._author, {withFileTypes: false})
+    const parseFiles = []
+    for(const test of listFiles){
+      const parseTest = JSON.parse((await fs.readFile(path.join(this._author, test))).toString())
+      if(parseTest.address){
+        parseTest.id = parseTest.address
+      } else if(parseTest.title){
+        parseTest.id = parseTest.title
       }
-      return parseFiles
-    } else {
-      const listFiles = await fs.readdir(this._author, {withFileTypes: false})
-      return listFiles.map((data) => {return {id: data, link: `bt://${data}/`}})
+      parseFiles.push(parseTest)
     }
+    return parseFiles
   }
   async getAuthorOnly(){
     return await fs.readdir(this._author, {withFileTypes: false})
