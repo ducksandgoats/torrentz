@@ -17,10 +17,11 @@ const {uid} = require('uid')
 
 class Torrentz {
   constructor (opts = {}) {
-    const defOpts = { folder: __dirname, storage: 'storage', author: 'author', description: 'description', current: true, timeout: 60000, routine: 3600000 }
+    const defOpts = { folder: __dirname, storage: 'storage', author: 'author', description: 'description', current: true, timeout: 60000, routine: 3600000, align: true }
     const finalOpts = { ...defOpts, ...opts }
     this._timeout = finalOpts.timeout
     this._routine = finalOpts.routine
+    this._align = finalOpts.align
     this.checkHash = /^[a-fA-F0-9]{40}$/
     this.checkAddress = /^[a-fA-F0-9]{64}$/
     this.checkTitle = /^[a-zA-Z0-9]/
@@ -834,7 +835,7 @@ class Torrentz {
     }
     return obj
   }
-  async listDirectory(data){
+  async getDirectory(data){
     return await fs.readdir(this._storage, {withFileTypes: data})
   }
   async listAuthor(){
@@ -851,8 +852,55 @@ class Torrentz {
     }
     return parseFiles
   }
-  async getAuthorOnly(){
+  async getAuthor(){
     return await fs.readdir(this._author, {withFileTypes: false})
+  }
+  async listDirectory(data){
+    if(data){
+      const adr = new Set()
+      const tle = new Set()
+      const listFiles = await fs.readdir(this._author, {withFileTypes: false})
+      const parseFiles = []
+      for(const test of listFiles){
+        const parseTest = JSON.parse((await fs.readFile(path.join(this._author, test))).toString())
+        if(parseTest.address){
+          adr.add(parseTest.address)
+          parseFiles.push({address: parseTest.address, infohash: parseTest.indohash, id: parseTest.address})
+        } else if(parseTest.title){
+          tle.add(parseTest.title)
+          parseFiles.push({title: parseTest.title, infohash: parseTest.infohash, id: parseTest.title})
+        }
+      }
+      const dirFiles = await fs.readdir(this._storage, {withFileTypes: false})
+      for(const iter of dirFiles){
+        if(iter.length === 64 && !adr.has(iter)){
+          parseFiles.push({address: iter, id: iter})
+        } else if(iter.length === 40){
+          parseFiles.push({infohash: iter, id: iter})
+        } else if(iter.length === 20 && !tle.has(iter) && this._align){
+          await fs.remove(path.join(this._storage, iter))
+        }
+      }
+      return parseFiles
+    } else {
+      const listFiles = await fs.readdir(this._author, {withFileTypes: false})
+      const parseFiles = []
+      for(const test of listFiles){
+        const parseTest = JSON.parse((await fs.readFile(path.join(this._author, test))).toString())
+        if(parseTest.address){
+          parseFiles.push(parseTest.address)
+        } else if(parseTest.title){
+          parseFiles.push(parseTest.infohash)
+        }
+      }
+      const dirFiles = await fs.readdir(this._storage, {withFileTypes: false})
+      for(const iter of dirFiles){
+        if(iter.length === 64 || iter.length === 40){
+          parseFiles.push(iter)
+        }
+      }
+      return Array.from(new Set(parseFiles))
+    }
   }
 }
 
