@@ -10,6 +10,7 @@ const wrtc = require('wrtc')
 const createTorrent = require('create-torrent')
 const parseTorrent = require('parse-torrent')
 const {uid} = require('uid')
+const fsp = require('fs/promises')
 
 // saves us from saving secret keys(saving secret keys even encrypted secret keys is something i want to avoid)
 // with this function which was taken from the bittorrent-dht package
@@ -17,7 +18,7 @@ const {uid} = require('uid')
 
 class Torrentz {
   constructor (opts = {}) {
-    const defOpts = { folder: __dirname, storage: 'storage', author: 'author', description: 'description', current: true, timeout: 60000, routine: 3600000, align: true }
+    const defOpts = { folder: __dirname, storage: 'storage', author: 'author', description: 'description', timeout: 60000, routine: 3600000, align: true }
     const finalOpts = { ...defOpts, ...opts }
     this._timeout = finalOpts.timeout
     this._routine = finalOpts.routine
@@ -29,7 +30,6 @@ class Torrentz {
     finalOpts.folder = path.resolve(finalOpts.folder)
     fs.ensureDirSync(finalOpts.folder)
 
-    this._current = finalOpts.current
     this._folder = finalOpts.folder
     this._storage = path.join(this._folder, finalOpts.storage)
     this._author = path.join(this._folder, finalOpts.author)
@@ -115,20 +115,7 @@ class Torrentz {
   // when we resume or seed a user created BEP46 torrent that has already been created before
   // we have to check that the infohash of the torrent(remember we do not know the infohash before) matches the signature
   // if it does not match, that means the data/torrent has been corrupted somehow
-  async ownData (address, infoHash) {
-    const authorPath = path.join(this._author, address)
-    if (!await fs.pathExists(authorPath)) {
-      throw new Error('data was not found')
-    }
-    // get data from file
-    let data = await fs.readFile(authorPath)
-    // parse the data file
-    data = JSON.parse(data.toString())
-
-    if(infoHash !== data.infohash){
-      throw new Error('infohash does not match with the given infohash')
-    }
-
+  async ownData (data, infoHash) {
     const hashBuff = Buffer.from(infoHash, 'hex')
     const signatureBuff = Buffer.from(data.sig, 'hex')
     const encodedSignatureData = this.encodeSigData({ seq: data.sequence, v: { ih: hashBuff, ...data.stuff } })
@@ -212,16 +199,7 @@ class Torrentz {
       }
     }
 
-    let main = null
-    let seq = null
-    const authorPath = path.join(this._author, address)
-    if (await fs.pathExists(authorPath)) {
-      main = await fs.readFile(authorPath)
-      main = JSON.parse(main.toString())
-      seq = main.sequence + 1
-    } else {
-      seq = count ? count : 0
-    }
+    let seq = count
 
     const buffSig = ed.sign(this.encodeSigData({ seq, v }), buffAddKey, buffSecKey)
 
@@ -235,9 +213,7 @@ class Torrentz {
       })
     })
     const { ih, ...stuff } = text
-    main = { magnet: `magnet:?xs=${this.BTPK_PREFIX}${address}`, address, infohash: ih, sequence: seq, stuff, sig: buffSig.toString('hex'), ...putData }
-    await fs.writeFile(authorPath, JSON.stringify(main))
-    return main
+    return { magnet: `magnet:?xs=${this.BTPK_PREFIX}${address}`, address, infohash: ih, sequence: seq, stuff, sig: buffSig.toString('hex'), ...putData }
   }
 
   async loadTorrent(id, pathToData, opts = {}){
@@ -268,7 +244,14 @@ class Torrentz {
           this.delayTimeOut(useTimeout, this.errName(new Error(id + ' took too long, it timed out'), 'ErrorTimeout'), false),
           this.startTorrent(folderPath, { ...useOpts, destroyStoreOnDestroy: false })
         ])
-        // await fs.writeFile(path.join(this._author, id), JSON.stringify({infohash: checkTorrent.infoHash, title: id}))
+        if(checkTorrent.infoHash !== authorStuff.infohash){
+          try {
+            this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false }) 
+          } catch (error) {
+            console.error(error)
+          }
+          throw new Error('infohash does not match with the given infohash')
+        }
         const mainPath = path.join(checkTorrent.path, checkTorrent.name)
         checkTorrent.folder = folderPath
         checkTorrent.address = null
@@ -276,12 +259,6 @@ class Torrentz {
         checkTorrent.infohash = checkTorrent.infoHash
         checkTorrent.title = authorStuff.title
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
-
-        if(checkTorrent.infohash !== authorStuff.infohash){
-          await fs.remove(authorPath)
-          await fs.writeFile(path.join(this._author, checkTorrent.infohash), JSON.stringify({infohash: checkTorrent.infoHash, title: checkTorrent.title}))
-        }
-
         this.checkId.set(id, checkTorrent)
         return pathToData === '/' ? checkTorrent : pathToData.includes('.') ? checkTorrent.files.find(file => { return pathToData === file.urlPath }) : checkTorrent.files.filter(file => {return file.urlPath.includes(pathToData)})
       } else {
@@ -312,18 +289,23 @@ class Torrentz {
       }
     } else if(this.checkAddress.test(id)){
       if(await fs.pathExists(authorPath)){
-        const folderPath = path.join(this._storage, id)
-        if (!await fs.pathExists(folderPath)) {
-          throw new Error('folder does not exist')
-        }
-
-        const descriptionPath = path.join(this._description, id)
+        const authorStuff = JSON.parse((await fs.readFile(authorPath)).toString())
+        const folderPath = path.join(this._storage, authorStuff.title)
+        const descriptionPath = path.join(this._description, authorStuff.title)
         const useOpts = await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else{return {}}})()
 
         const checkTorrent = await Promise.race([
           this.delayTimeOut(useTimeout, this.errName(new Error(id + ' took too long, it timed out'), 'ErrorTimeout'), false),
           this.startTorrent(folderPath, { ...useOpts, destroyStoreOnDestroy: true })
         ])
+        if(checkTorrent.infoHash !== authorStuff.infohash){
+          try {
+            this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false }) 
+          } catch (error) {
+            console.error(error)
+          }
+          throw new Error('infohash does not match with the given infohash')
+        }
         const checkProperty = await Promise.race([
           this.delayTimeOut(this._timeout, this.errName(new Error(id + ' property took too long, it timed out, please try again with only the keypair without the folder'), 'ErrorTimeout'), false),
           this.ownData(id, checkTorrent.infoHash)
@@ -355,17 +337,10 @@ class Torrentz {
     
         checkProperty.folder = folderPath
         const dataPath = path.join(checkProperty.folder, checkProperty.infohash)
-    
-        // if current option is true, then if the infohash for the address is brand new then empty the directory and download the new infohash
-        // if the current option is false, then at least make sure the main folder which is named with the public key address exists
-        if (this._current) {
-          if (!await fs.pathExists(dataPath)) {
-            await fs.emptyDir(checkProperty.folder)
-          }
-        } else {
-          if (!await fs.pathExists(checkProperty.folder)) {
-            await fs.ensureDir(checkProperty.folder)
-          }
+
+        if (!await fs.pathExists(dataPath)) {
+          await fs.emptyDir(checkProperty.folder)
+          await fs.writeFile(path.join(checkProperty.folder, 'info.txt'), checkProperty.infohash)
         }
     
         const checkTorrent = await Promise.race([
@@ -408,7 +383,7 @@ class Torrentz {
       }
       const activeTorrent = this.findTheTorrent(id.infohash)
       if(activeTorrent){
-        await this.stopTorrent(activeTorrent, {destroyStore: false})
+        await this.stopTorrent(activeTorrent.infoHash, {destroyStore: false})
       }
 
       const authorPath = path.join(this._author, id.infohash)
@@ -496,24 +471,25 @@ class Torrentz {
 
       this.checkId.set(checkTorrent.infohash, checkTorrent)
       return { infohash: checkTorrent.infohash, title: checkTorrent.title, name: checkTorrent.name, length: checkTorrent.length, files: checkTorrent.files, saved: mainData }
-    } else if((id.address || id.address === null) && (id.secret || id.secret === null)){
-      if (!id.address || !id.secret) {
-        id = this.createKeypair()
-      } else {
-        if(this.checkId.has(id.address)){
-          this.checkId.delete(id.address)
-        }
-        const activeTorrent = this.findTheTorrent(id.address)
-        if(activeTorrent){
-          await this.stopTorrent(activeTorrent, {destroyStore: false})
-        }
+    } else if(id.address && id.secret){
+      if(this.checkId.has(id.address)){
+        this.checkId.delete(id.address)
       }
-      const folderPath = path.join(this._storage, id.address)
+      const activeTorrent = this.findTheTorrent(id.address)
+      if(activeTorrent){
+        await this.stopTorrent(activeTorrent.infoHash, {destroyStore: false})
+      }
+      const authorPath = path.join(this._author, id.address)
+      if (!await fs.pathExists(authorPath)) {
+        throw new Error('author does not exist')
+      }
+      const authorStuff = JSON.parse((await fs.readFile(authorPath)).toString())
+      const folderPath = path.join(this._storage, authorStuff.title)
+
       await fs.ensureDir(folderPath)
 
       const dataPath = path.join(folderPath, pathToData)
-      const descriptionPath = path.join(this._description, id.address)
-      // const useOpts = await (async () => {if(opts.opt){await fs.writeFile(descriptionPath, JSON.stringify(opts.opt));return opts.opt;}else if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else{return {};}})()
+      const descriptionPath = path.join(this._description, authorStuff.title)
       const useOpts = await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else if(opts.opt){await fs.writeFile(descriptionPath, JSON.stringify(opts.opt));return opts.opt;}else{return {};}})()
 
       const additionalData = headers ? await this.handleFormData(dataPath, headers, data) : data ? await this.handleRegData(dataPath, data) : []
@@ -528,7 +504,7 @@ class Torrentz {
       ])
       const checkProperty = await Promise.race([
         this.delayTimeOut(this._timeout, this.errName(new Error(id.address + ' property took too long, it timed out, please try again with only the keypair without the folder'), 'ErrorTimeout'), false),
-        this.publishFunc(id.address, id.secret, { ih: checkTorrent.infoHash }, opts.count ? opts.count : null)
+        this.publishFunc(authorStuff.address, id.secret, { ih: checkTorrent.infoHash }, opts.count ? opts.count : authorStuff.sequence + 1)
       ]).catch(err => {
         try {
           this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false })
@@ -539,50 +515,113 @@ class Torrentz {
       })
       // don't overwrite the torrent's infohash even though they will both be the same
       checkProperty.folder = folderPath
+      checkProperty.title = authorStuff.title
       for (const prop in checkProperty) {
         checkTorrent[prop] = checkProperty[prop]
       }
       const mainPath = path.join(checkTorrent.path, checkTorrent.name)
-      checkTorrent.title = null
       checkTorrent.own = true
       checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
+      // if(checkProperty.infohash !== authorStuff.infohash){
+      //   // await fs.remove(authorPath)
+      //   await fs.writeFile(authorPath, JSON.stringify(checkProperty))
+      // }
+      await fs.writeFile(authorPath, JSON.stringify(checkProperty))
+      this.checkId.set(id.address, checkTorrent)
+      return { address: id.address, secret: id.secret, infohash: checkTorrent.infohash, sequence: checkTorrent.sequence, name: checkTorrent.name, length: checkTorrent.length, files: checkTorrent.files, saved: mainData}
+    } else if(!id.address && !id.secret){
+      id = this.createKeypair()
+
+      const title = uid(20)
+      const folderPath = path.join(this._storage, title)
+
+      await fs.ensureDir(folderPath)
+
+      const dataPath = path.join(folderPath, pathToData)
+      const descriptionPath = path.join(this._description, title)
+      const useOpts = await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else if(opts.opt){await fs.writeFile(descriptionPath, JSON.stringify(opts.opt));return opts.opt;}else{return {};}})()
+
+      const additionalData = headers ? await this.handleFormData(dataPath, headers, data) : data ? await this.handleRegData(dataPath, data) : []
+      if(additionalData.textData.length){
+        await fs.writeFile(path.join(folderPath, id.address + '-data.txt'), `${additionalData.textData.map(file => {return `${file.key}: ${file.value}\n`})}`, {flag: 'a'})
+      }
+      const mainData = additionalData.fileData || additionalData.byItSelf
+
+      const checkTorrent = await Promise.race([
+        this.delayTimeOut(useTimeout, this.errName(new Error('torrent took too long, it timed out'), 'ErrorTimeout'), false),
+        this.startTorrent(folderPath, { ...useOpts, destroyStoreOnDestroy: false })
+      ])
+      const checkProperty = await Promise.race([
+        this.delayTimeOut(this._timeout, this.errName(new Error(id.address + ' property took too long, it timed out, please try again with only the keypair without the folder'), 'ErrorTimeout'), false),
+        this.publishFunc(id.address, id.secret, { ih: checkTorrent.infoHash }, opts.count ? opts.count : 0)
+      ]).catch(err => {
+        try {
+          this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false })
+        } catch (error) {
+          console.error(error)
+        }
+        throw err
+      })
+      // don't overwrite the torrent's infohash even though they will both be the same
+      checkProperty.folder = folderPath
+      checkProperty.title = title
+      for (const prop in checkProperty) {
+        checkTorrent[prop] = checkProperty[prop]
+      }
+      const mainPath = path.join(checkTorrent.path, checkTorrent.name)
+      checkTorrent.own = true
+      checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
+
+      const authorPath = path.join(this._author, checkProperty.address)
+      await fs.writeFile(authorPath, JSON.stringify(checkProperty))
+      
       this.checkId.set(id.address, checkTorrent)
       return { address: id.address, secret: id.secret, infohash: checkTorrent.infohash, sequence: checkTorrent.sequence, name: checkTorrent.name, length: checkTorrent.length, files: checkTorrent.files, saved: mainData}
     } else {
       throw new Error('title or address/secret is needed or needs to be null')
     }
   }
-  async shredTorrent(id, pathToData, opts = {}){
+  async shredTorrent(info, pathToData, opts = {}){
     if(!opts){
       opts = {}
     }
 
     let kindOfId
-    if(this.checkAddress.test(id)){
+    const torrentData = {}
+
+    if(this.checkId.has(info.id)){
+      this.checkId.delete(info.id)
+    }
+
+    const activeTorrent = this.findTheTorrent(info.id)
+    const useTimeout = opts.timeout ? opts.timeout * 1000 : this._timeout
+    if(activeTorrent){
+      await Promise.race([
+        this.stopTorrent(activeTorrent.infoHash, {destroyStore: false}),
+        this.delayTimeOut(useTimeout, this.errName(new Error('did not remove in time'), 'ErrorTimeout'), false)
+      ])
+    }
+
+    const authorPath = path.join(this._author, info.id)
+
+    if(this.checkHash.test(info.id)){
+      kindOfId = 'infohash'
+    } else if(this.checkAddress.test(info.id)){
       kindOfId = 'address'
+    } else {
+      throw new Error('id is not valid')
+    }
 
-      const activeTorrent = this.findTheTorrent(id)
-      const useTimeout = opts.timeout ? opts.timeout * 1000 : this._timeout
-      if(activeTorrent){
-        await Promise.race([
-          this.stopTorrent(activeTorrent, {destroyStore: false}),
-          this.delayTimeOut(useTimeout, this.errName(new Error('did not remove in time'), 'ErrorTimeout'), false)
-        ])
-      }
-  
-      if(this.checkId.has(id)){
-        this.checkId.delete(id)
-      }
-
-      const authorPath = path.join(this._author, id)
-      const folderPath = path.join(this._storage, id)
-      const descriptionPath = path.join(this._description, id)
+    if(await fs.pathExists(authorPath)){
+      const authorStuff = JSON.parse((await fs.readFile(authorPath)).toString()) 
+      const folderPath = path.join(this._storage, authorStuff.title)
+      const descriptionPath = path.join(this._description, authorStuff.title)
       const dataPath = path.join(folderPath, pathToData)
-      
+
       if(!await fs.pathExists(folderPath)){
         throw new Error('did not find any torrent data to delete')
       }
-  
+
       if(pathToData === '/'){
         if(await fs.pathExists(authorPath)){
           await fs.remove(authorPath)
@@ -594,107 +633,402 @@ class Torrentz {
           await fs.remove(descriptionPath)
         }
       } else {
-        if(!await fs.pathExists(authorPath)){
-          throw new Error('Must be creator to delete any files or directories inside the torrent')
-        }
-
-        if(await fs.pathExists(dataPath)){
-          await fs.remove(dataPath)
-        }
-      }
-
-    } else if(this.checkHash.test(id)){
-      kindOfId = 'infohash'
-
-      const activeTorrent = this.findTheTorrent(id)
-      const useTimeout = opts.timeout ? opts.timeout * 1000 : this._timeout
-      if(activeTorrent){
-        await Promise.race([
-          this.stopTorrent(activeTorrent, {destroyStore: false}),
-          this.delayTimeOut(useTimeout, this.errName(new Error('did not remove in time'), 'ErrorTimeout'), false)
-        ])
-      }
+        if(kindOfId === 'address'){
+          if(!info.auth){
+            throw new Error('secret key is request')
+          }
+          if(await fs.pathExists(dataPath)){
+            await fs.remove(dataPath)
+          } else {
+            throw new Error('path is not valid')
+          }
+          const useOpts = descriptionPath ? await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else{return {};}})() : {}
   
-      if(this.checkId.has(id)){
-        this.checkId.delete(id)
-      }
+          const dataFromFolder = await (async () => {
+            try {
+              return await this.dataFromTorrent(folderPath, useOpts)
+            } catch (err) {
+              if(authorStuff){
+                await fs.remove(authorPath)
+              }
+              await fs.remove(folderPath)
+        
+              if(await fs.pathExists(descriptionPath)){
+                await fs.remove(descriptionPath)
+              }
+              throw err
+            }
+          })()
 
-      const authorPath = path.join(this._author, id)
-      // const isAuthorPath = await fs.pathExists(authorPath) ? null : null
-      const authorStuff = await fs.pathExists(authorPath) ? JSON.parse((await fs.readFile(authorPath)).toString()) : null
-      const folderPath = authorStuff ? path.join(this._storage, authorStuff.title) : path.join(this._storage, id)
-      const descriptionPath = authorStuff ? path.join(this._description, authorStuff.title) : path.join(this._description, id)
-      const dataPath = path.join(folderPath, pathToData)
+          const obj = {...authorStuff.stuff, ih: dataFromFolder.infoHash}
+
+          const dataFromProp = await this.publishFunc(info.id, info.auth, obj, authorStuff.sequence + 1)
+  
+          await fs.writeFile(authorPath, JSON.stringify(dataFromProp))
+  
+          info.id = authorStuff.address
+        } else if(kindOfId === 'infohash'){
+          if(await fs.pathExists(dataPath)){
+            await fs.remove(dataPath)
+          } else {
+            throw new Error('path is not valid')
+          }
+  
+          const useOpts = descriptionPath ? await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else{return {};}})() : {}
+  
+          const dataFromFolder = await (async () => {
+            try {
+              return await this.dataFromTorrent(folderPath, useOpts)
+            } catch (err) {
+              if(authorStuff){
+                await fs.remove(authorPath)
+              }
+              await fs.remove(folderPath)
+        
+              if(await fs.pathExists(descriptionPath)){
+                await fs.remove(descriptionPath)
+              }
+              throw err
+            }
+          })()
+  
+          await fs.writeFile(authorPath, JSON.stringify({infohash: dataFromFolder.infoHash, title: authorStuff.title}))
+  
+          info.id = dataFromFolder.infoHash
+        }
+      }
+    } else {
+      const folderPath = path.join(this._storage, info.id)
+      const descriptionPath = path.join(this._description, info.id)
+      // const dataPath = path.join(folderPath, pathToData)
 
       if(!await fs.pathExists(folderPath)){
         throw new Error('did not find any torrent data to delete')
       }
 
       if(pathToData === '/'){
-        if(authorStuff){
-          await fs.remove(authorPath)
-        }
+
         await fs.remove(folderPath)
   
         if(await fs.pathExists(descriptionPath)){
           await fs.remove(descriptionPath)
         }
       } else {
-        if(!authorStuff){
-          throw new Error('Must be creator to delete any files or directories inside the torrent')
-        }
-
-        if(await fs.pathExists(dataPath)){
-          await fs.remove(dataPath)
-        }
-
-        const useOpts = descriptionPath ? await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else{return {};}})() : {}
-
-        const dataFromTorrent = await new Promise((resolve, reject) => {
-          createTorrent(folderPath, useOpts, (err, torrent) => {
-            if(err){
-              reject(err)
-            } else if(torrent){
-              resolve(torrent)
-            } else {
-              reject(new Error('could not get torrent data from the folder'))
+        if(kindOfId === 'address'){
+          const mainPath = path.join(folderPath, 'info.txt')
+          const dataPath = path.join(folderPath, (await fs.readFile(mainPath)).toString())
+          let wasItFound = null
+          const dirPath = await fs.readdir(dataPath, {withFileTypes: true})
+          for(const test of dirPath){
+            if(test.isDirectory()){
+              const testPath = path.join(dataPath, test.name, pathToData)
+              if(await fs.pathExists(testPath)){
+                wasItFound = testPath
+                break
+              }
             }
-          })
-        })
-
-        const dataFromFolder = await (async () => {
-          try {
-            return parseTorrent(dataFromTorrent)
-          } catch (err) {
-            if(authorStuff){
-              await fs.remove(authorPath)
+            if(test.isFile()){
+              const testPath = path.join(dataPath, pathToData)
+              const otherPath = path.join(dataPath, test.name)
+              if(testPath === otherPath){
+                wasItFound = testPath
+                break
+              }
             }
-            await fs.remove(folderPath)
-      
-            if(await fs.pathExists(descriptionPath)){
-              await fs.remove(descriptionPath)
-            }
-            throw err
           }
-        })()
-
-        if(dataFromFolder.infoHash !== authorStuff.infohash){
-          await fs.remove(authorPath)
+          if(wasItFound){
+            await fs.remove(wasItFound)
+            const testData = await this.echoAddress(info.id, folderPath)
+            torrentData.address = testData.address
+            torrentData.secret = testData.secret
+            info.id = testData.address
+          } else {
+            throw new Error('did not find the path')
+          }
+        } else if(kindOfId === 'infohash'){
+          let wasItFound = null
+          const dirPath = await fs.readdir(folderPath, {withFileTypes: true})
+          for(const test of dirPath){
+            if(test.isDirectory()){
+              const testPath = path.join(folderPath, test.name, pathToData)
+              if(await fs.pathExists(testPath)){
+                wasItFound = testPath
+                break
+              }
+            }
+            if(test.isFile()){
+              const testPath = path.join(folderPath, pathToData)
+              const otherPath = path.join(folderPath, test.name)
+              if(testPath === otherPath){
+                wasItFound = testPath
+                break
+              }
+            }
+          }
+          if(wasItFound){
+            await fs.remove(wasItFound)
+            const testData = await this.echoHash(info.id, folderPath)
+            torrentData.infohash = testData.infohash
+            info.id = testData.infohash
+          } else {
+            throw new Error('did not find the path')
+          }
         }
+        // throw new Error('Must be creator to delete any files or directories inside the torrent')
+      }
+    }
+    return {id: info.id, path: pathToData, type: kindOfId, torrent: torrentData}
+  }
+  async dataFromTorrent(folder, opts){
+    const test = await new Promise((resolve, reject) => {
+      createTorrent(folder, opts, (err, torrent) => {
+        if(err){
+          reject(err)
+        } else if(torrent){
+          resolve(torrent)
+        } else {
+          reject(new Error('could not get torrent data from the folder'))
+        }
+      })
+    })
+    return parseTorrent(test)
+  }
+  async echoAddress(id, folderPath){
+    const infoPath = path.join(folderPath, 'info.txt')
+    const mainPath = path.join(folderPath, (await fs.readFile(infoPath)).toString())
+    const mainArr = await fs.readdir(mainPath, {withFileTypes: true})
+    const title = uid(20)
+    const titlePath = path.join(this._storage, title)
+    await fs.ensureDir(titlePath)
+    for(const test of mainArr){
+      if(test.isDirectory()){
+        const dataPath = path.join(mainPath, test.name)
+        await fsp.cp(dataPath, titlePath, {recursive: true, force: true})
+        // await fs.move(dataPath, titlePath, {overwrite: true})
+      }
+      if(test.isFile()){
+        const dataPath = path.join(mainPath, test.name)
+        const finalPath = path.join(titlePath, test.name)
+        await fsp.cp(dataPath, finalPath, {force: true})
+        // await fs.move(dataPath, finalPath, {overwrite: true})
+      }
+    }
+    await fs.remove(folderPath)
+    const descripPath = path.join(this._description, title)
+    await fs.writeFile(descripPath, JSON.stringify({}))
+    const dataFromTitle = await this.dataFromTorrent(titlePath, {})
+    const pairID = this.createKeypair()
+    const pubTorrentData = await this.publishFunc(pairID.address, pairID.secret, {ih: dataFromTitle.infoHash}, 0)
+    pubTorrentData.title = title
+    pubTorrentData.echo = id
+    const authorPath = path.join(this._author, pairID.address)
+    await fs.writeFile(authorPath, JSON.stringify(pubTorrentData))
+    return pairID
+  }
+  async echoHash(id, folderPath){
+    const mainArr = await fs.readdir(folderPath, {withFileTypes: true})
+    const title = uid(20)
+    const titlePath = path.join(this._storage, title)
+    await fs.ensureDir(titlePath)
+    for(const test of mainArr){
+      if(test.isDirectory()){
+        const dataPath = path.join(folderPath, test.name)
+        await fsp.cp(dataPath, titlePath, {recursive: true, force: true})
+        // await fs.move(dataPath, titlePath, {overwrite: true})
+      }
+      if(test.isFile()){
+        const dataPath = path.join(folderPath, test.name)
+        const finalPath = path.join(titlePath, test.name)
+        await fsp.cp(dataPath, finalPath, {force: true})
+        // await fs.move(dataPath, finalPath, {overwrite: true})
+      }
+    }
+    await fs.remove(folderPath)
+    const descripPath = path.join(this._description, title)
+    await fs.writeFile(descripPath, JSON.stringify({}))
+    const dataFromTitle = await this.dataFromTorrent(titlePath, {})
+    const pubTorrentData = {infohash: dataFromTitle.infoHash, title: title, echo: id}
+    const authorPath = path.join(this._author, dataFromTitle.infoHash)
+    await fs.writeFile(authorPath, JSON.stringify(pubTorrentData))
+    return {infohash: dataFromTitle.infoHash}
+  }
+  async echoTorrent(id, opts = {}){
+    if(!opts){
+      opts = {}
+    }
 
-        // if(dataFromFolder.infoHash !== id){
-        //   await fs.remove(authorPath)
-        // }
-
-        await fs.writeFile(path.join(this._author, dataFromFolder.infoHash), JSON.stringify({infohash: dataFromFolder.infoHash, title: authorStuff.title}))
-
-        id = dataFromFolder.infoHash
+    const useTimeout = opts.timeout ? opts.timeout * 1000 : this._timeout
+    const folderPath = path.join(this._storage, id)
+    const torrentData = {}
+    
+    if(this.checkAddress.test(id)){
+      if(await fs.pathExists(folderPath)){
+        const testData = await this.echoAddress(id, folderPath)
+        torrentData.address = testData.address
+        torrentData.secret = testData.secret
+      } else {
+        // await fs.ensureDir(folderPath)
+        const checkProperty = await Promise.race([
+          this.delayTimeOut(this._timeout, this.errName(new Error(id + ' property took too long, it timed out'), 'ErrorTimeout'), false),
+          this.resolveFunc(id)
+        ])
+        const dataPath = path.join(folderPath, checkProperty.infohash)
+        await fs.ensureDir(dataPath)
+        const infoPath = path.join(folderPath, 'info.txt')
+        await fs.writeFile(infoPath, JSON.stringify(checkProperty.infohash))
+        const checkTorrent = await Promise.race([
+          this.delayTimeOut(useTimeout, this.errName(new Error(checkProperty.address + ' took too long, it timed out'), 'ErrorTimeout'), false),
+          this.midTorrent(checkProperty.infohash, { path: dataPath, destroyStoreOnDestroy: false })
+        ]).catch(async (err) => {
+          try {
+            const haveIt = this.findTheTorrent(checkProperty.infohash)
+            if(haveIt){
+              this.webtorrent.remove(haveIt.infoHash, { destroyStore: false }) 
+            }
+          } catch (error) {
+            console.error(error)
+          }
+          await fs.remove(folderPath)
+          throw err
+        })
+        await Promise.race([
+          this.stopTorrent(checkTorrent.infoHash, {destroyStore: false}),
+          this.delayTimeOut(useTimeout, this.errName(new Error('did not remove in time'), 'ErrorTimeout'), false)
+        ])
+        const testData = await this.echoAddress(id, folderPath)
+        torrentData.address = testData.address
+        torrentData.secret = testData.secret
+      }
+    } else if(this.checkHash.test(id)){
+      if(await fs.pathExists(folderPath)){
+        const testData = await this.echoHash(id, folderPath)
+        torrentData.infohash = testData.infohash
+      } else {
+        await fs.ensureDir(folderPath)
+        const checkTorrent = await Promise.race([
+          this.delayTimeOut(useTimeout, this.errName(new Error(checkProperty.address + ' took too long, it timed out'), 'ErrorTimeout'), false),
+          this.midTorrent(id, { path: folderPath, destroyStoreOnDestroy: false })
+        ]).catch(async (err) => {
+          try {
+            const haveIt = this.findTheTorrent(id)
+            if(haveIt){
+              this.webtorrent.remove(haveIt.infoHash, { destroyStore: false }) 
+            }
+          } catch (error) {
+            console.error(error)
+          }
+          await fs.remove(folderPath)
+          throw err
+        })
+        await Promise.race([
+          this.stopTorrent(checkTorrent.infoHash, {destroyStore: false}),
+          this.delayTimeOut(useTimeout, this.errName(new Error('did not remove in time'), 'ErrorTimeout'), false)
+        ])
+        const testData = await this.echoHash(id, folderPath)
+        torrentData.infohash = testData.infohash
       }
     } else {
       throw new Error('id is not valid')
     }
-
-    return {id, path: pathToData, type: kindOfId}
+    return torrentData
+  }
+  async unEchoTorrent(id, opts = {}){
+    if(!opts){
+      opts = {}
+    }
+    const useTimeout = opts.timeout ? opts.timeout * 1000 : this._timeout
+    const torrentData = {}
+    if(this.checkAddress.test(id)){
+      const authorPath = path.join(this._author, id)
+      if(await fs.pathExists(authorPath)){
+        const authorStuff = JSON.parse((await fs.readFile(authorPath)).toString())
+        await fs.remove(authorPath)
+        const folderPath = path.join(this._storage, authorStuff.title)
+        if(await fs.pathExists(folderPath)){
+          await fs.remove(folderPath)
+          const descripPath = path.join(this._description, authorStuff.title)
+          if(await fs.pathExists(descripPath)){
+            await fs.remove(descripPath)
+          }
+        const checkProperty = await Promise.race([
+          this.delayTimeOut(this._timeout, this.errName(new Error(authorStuff.echo + ' property took too long, it timed out'), 'ErrorTimeout'), false),
+          this.resolveFunc(authorStuff.echo)
+        ])
+        const echoPath = path.join(this._storage, checkProperty.address)
+        const dataPath = path.join(echoPath, checkProperty.infohash)
+        await fs.ensureDir(dataPath)
+        const infoPath = path.join(echoPath, 'info.txt')
+        await fs.writeFile(infoPath, JSON.stringify(checkProperty.infohash))
+        const checkTorrent = await Promise.race([
+          this.delayTimeOut(useTimeout, this.errName(new Error(checkProperty.address + ' took too long, it timed out'), 'ErrorTimeout'), false),
+          this.midTorrent(checkProperty.infohash, { path: dataPath, destroyStoreOnDestroy: false })
+        ]).catch(async (err) => {
+          try {
+            const haveIt = this.findTheTorrent(checkProperty.infohash)
+            if(haveIt){
+              this.webtorrent.remove(haveIt.infoHash, { destroyStore: false }) 
+            }
+          } catch (error) {
+            console.error(error)
+          }
+          await fs.remove(echoPath)
+          throw err
+        })
+        await Promise.race([
+          this.stopTorrent(checkTorrent.infoHash, {destroyStore: false}),
+          this.delayTimeOut(useTimeout, this.errName(new Error('did not remove in time'), 'ErrorTimeout'), false)
+        ])
+        torrentData.address = checkProperty
+        } else {
+          throw new Error('did not find the folder')
+        }
+      } else {
+        throw new Error('did not find the echo')
+      }
+    } else if(this.checkHash.test(id)){
+      const authorPath = path.join(this._author, id)
+      if(await fs.pathExists(authorPath)){
+        const authorStuff = JSON.parse((await fs.readFile(authorPath)).toString())
+        await fs.remove(authorPath)
+        const folderPath = path.join(this._storage, authorStuff.title)
+        if(await fs.pathExists(folderPath)){
+          await fs.remove(folderPath)
+          const descripPath = path.join(this._description, authorStuff.title)
+          if(await fs.pathExists(descripPath)){
+            await fs.remove(descripPath)
+          }
+        const echoPath = path.join(this._storage, authorStuff.echo)
+        await fs.ensureDir(echoPath)
+        const checkTorrent = await Promise.race([
+          this.delayTimeOut(useTimeout, this.errName(new Error(checkProperty.address + ' took too long, it timed out'), 'ErrorTimeout'), false),
+          this.midTorrent(authorStuff.echo, { path: echoPath, destroyStoreOnDestroy: false })
+        ]).catch(async (err) => {
+          try {
+            const haveIt = this.findTheTorrent(checkProperty.infohash)
+            if(haveIt){
+              this.webtorrent.remove(haveIt.infoHash, { destroyStore: false }) 
+            }
+          } catch (error) {
+            console.error(error)
+          }
+          await fs.remove(echoPath)
+          throw err
+        })
+        await Promise.race([
+          this.stopTorrent(checkTorrent.infoHash, {destroyStore: false}),
+          this.delayTimeOut(useTimeout, this.errName(new Error('did not remove in time'), 'ErrorTimeout'), false)
+        ])
+        torrentData.infohash = authorStuff.echo
+        } else {
+          throw new Error('did not find the folder')
+        }
+      } else {
+        throw new Error('did not find the echo')
+      }
+    } else {
+      throw new Error('id is not valid')
+    }
+    return torrentData
   }
   midTorrent(id, opts){
     return new Promise((resolve, reject) => {
@@ -710,9 +1044,9 @@ class Torrentz {
       })
     })
   }
-  stopTorrent(torrent, opts){
+  stopTorrent(infohash, opts){
     return new Promise((resolve, reject) => {
-      this.webtorrent.remove(torrent.infoHash, opts, (error) => {
+      this.webtorrent.remove(infohash, opts, (error) => {
         if(error){
           reject(error)
         } else {
@@ -865,7 +1199,7 @@ class Torrentz {
         const parseTest = JSON.parse((await fs.readFile(path.join(this._author, test))).toString())
         if(parseTest.address){
           adr.add(parseTest.address)
-          parseFiles.push({address: parseTest.address, infohash: parseTest.indohash, id: parseTest.address})
+          parseFiles.push({address: parseTest.address, infohash: parseTest.infohash, id: parseTest.address})
         } else if(parseTest.title){
           tle.add(parseTest.title)
           parseFiles.push({title: parseTest.title, infohash: parseTest.infohash, id: parseTest.title})
