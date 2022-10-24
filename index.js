@@ -11,6 +11,7 @@ const createTorrent = require('create-torrent')
 const parseTorrent = require('parse-torrent')
 const {uid} = require('uid')
 const fsp = require('fs/promises')
+const glob = require("glob")
 
 // saves us from saving secret keys(saving secret keys even encrypted secret keys is something i want to avoid)
 // with this function which was taken from the bittorrent-dht package
@@ -639,6 +640,12 @@ class Torrentz {
           }
           if(await fs.pathExists(dataPath)){
             await fs.remove(dataPath)
+            if(!(await this.getAllFiles(folderPath)).length){
+              await fs.remove(authorPath)
+              await fs.remove(folderPath)
+              await fs.remove(descriptionPath)
+              throw new Error('torrent can not be empty')
+            }
           } else {
             throw new Error('path is not valid')
           }
@@ -670,6 +677,12 @@ class Torrentz {
         } else if(kindOfId === 'infohash'){
           if(await fs.pathExists(dataPath)){
             await fs.remove(dataPath)
+            if(!(await this.getAllFiles(folderPath)).length){
+              await fs.remove(authorPath)
+              await fs.remove(folderPath)
+              await fs.remove(descriptionPath)
+              throw new Error('torrent can not be empty')
+            }
           } else {
             throw new Error('path is not valid')
           }
@@ -738,6 +751,11 @@ class Torrentz {
           }
           if(wasItFound){
             await fs.remove(wasItFound)
+            if(!(await this.getAllFiles(dataPath)).length){
+              await fs.remove(folderPath)
+              await fs.remove(descriptionPath)
+              throw new Error('torrent can not be empty')
+            }
             const testData = await this.echoAddress(info.id, folderPath)
             torrentData.address = testData.address
             torrentData.secret = testData.secret
@@ -767,6 +785,11 @@ class Torrentz {
           }
           if(wasItFound){
             await fs.remove(wasItFound)
+            if(!(await this.getAllFiles(folderPath)).length){
+              await fs.remove(folderPath)
+              await fs.remove(descriptionPath)
+              throw new Error('torrent can not be empty')
+            }
             const testData = await this.echoHash(info.id, folderPath)
             torrentData.infohash = testData.infohash
             info.id = testData.infohash
@@ -1029,6 +1052,17 @@ class Torrentz {
       throw new Error('id is not valid')
     }
     return torrentData
+  }
+  getAllFiles(usePath){
+    return new Promise((resolve, reject) => {
+      glob('**/*', {cwd: usePath, strict: false, nodir: true}, function (err, files) {
+        if(err){
+          reject(err)
+        } else {
+          resolve(files)
+        }
+      })
+    })
   }
   midTorrent(id, opts){
     return new Promise((resolve, reject) => {

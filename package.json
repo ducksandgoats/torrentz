@@ -1,6 +1,6 @@
 {
   "name": "torrentz",
-  "version": "6.0.4",
+  "version": "6.0.5",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -15,6 +15,7 @@
     "create-torrent": "^5.0.6",
     "ed25519-supercop": "^2.0.1",
     "fs-extra": "^10.1.0",
+    "glob": "^8.0.3",
     "parse-torrent": "^9.1.5",
     "simple-sha1": "^3.1.0",
     "uid": "^2.0.0",
