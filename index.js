@@ -308,7 +308,7 @@ class Torrentz {
         }
         const checkProperty = await Promise.race([
           this.delayTimeOut(this._timeout, this.errName(new Error(id + ' property took too long, it timed out, please try again with only the keypair without the folder'), 'ErrorTimeout'), false),
-          this.ownData(id, checkTorrent.infoHash)
+          this.ownData(authorStuff, checkTorrent.infoHash)
         ]).catch(err => {
           try {
             this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false }) 
