@@ -674,6 +674,7 @@ class Torrentz {
           await fs.writeFile(authorPath, JSON.stringify(dataFromProp))
   
           info.id = authorStuff.address
+          torrentData.address = authorStuff.address
         } else if(kindOfId === 'infohash'){
           if(await fs.pathExists(dataPath)){
             await fs.remove(dataPath)
@@ -708,6 +709,7 @@ class Torrentz {
           await fs.writeFile(authorPath, JSON.stringify({infohash: dataFromFolder.infoHash, title: authorStuff.title}))
   
           info.id = dataFromFolder.infoHash
+          torrentData.infohash = dataFromFolder.infoHash
         }
       }
     } else {
