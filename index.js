@@ -694,19 +694,15 @@ class Torrentz {
             try {
               return await this.dataFromTorrent(folderPath, useOpts)
             } catch (err) {
-              if(authorStuff){
-                await fs.remove(authorPath)
-              }
+              await fs.remove(authorPath)
               await fs.remove(folderPath)
-        
-              if(await fs.pathExists(descriptionPath)){
-                await fs.remove(descriptionPath)
-              }
+              await fs.remove(descriptionPath)
               throw err
             }
           })()
-  
-          await fs.writeFile(authorPath, JSON.stringify({infohash: dataFromFolder.infoHash, title: authorStuff.title}))
+
+          await fs.remove(authorPath)
+          await fs.writeFile(dataFromFolder.infoHash, JSON.stringify({infohash: dataFromFolder.infoHash, title: authorStuff.title}))
   
           info.id = dataFromFolder.infoHash
           torrentData.infohash = dataFromFolder.infoHash
