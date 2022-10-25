@@ -702,7 +702,7 @@ class Torrentz {
           })()
 
           await fs.remove(authorPath)
-          await fs.writeFile(dataFromFolder.infoHash, JSON.stringify({infohash: dataFromFolder.infoHash, title: authorStuff.title}))
+          await fs.writeFile(path.join(this._author, dataFromFolder.infoHash), JSON.stringify({infohash: dataFromFolder.infoHash, title: authorStuff.title}))
   
           info.id = dataFromFolder.infoHash
           torrentData.infohash = dataFromFolder.infoHash
