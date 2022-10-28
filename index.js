@@ -28,7 +28,7 @@ class Torrentz {
     this._align = finalOpts.align
     this.checkHash = /^[a-fA-F0-9]{40}$/
     this.checkAddress = /^[a-fA-F0-9]{64}$/
-    this.checkTitle = /^[a-zA-Z0-9]/
+    this.checkTitle = /^[a-zA-Z0-9]{16}$/
 
     finalOpts.folder = path.resolve(finalOpts.folder)
     fs.ensureDirSync(finalOpts.folder)
@@ -264,8 +264,8 @@ class Torrentz {
       const authorPath = path.join(this._author, id.infohash)
       if (await fs.pathExists(authorPath)) {
         const authorStuff = JSON.parse((await fs.readFile(authorPath)).toString())
-        const folderPath = path.join(this._storage, authorStuff.title)
-        const descriptionPath = path.join(this._description, authorStuff.title)
+        const folderPath = path.join(this._storage, authorStuff.dir)
+        const descriptionPath = path.join(this._description, authorStuff.dir)
         const useOpts = await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else{return {}}})()
         const checkTorrent = await Promise.race([
           this.delayTimeOut(useTimeout, this.errName(new Error(id + ' took too long, it timed out'), 'ErrorTimeout'), false),
@@ -284,7 +284,7 @@ class Torrentz {
         checkTorrent.address = null
         checkTorrent.own = true
         checkTorrent.infohash = checkTorrent.infoHash
-        checkTorrent.title = authorStuff.title
+        checkTorrent.dir = authorStuff.dir
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
         this.checkId.set(id, checkTorrent)
         return pathToData === '/' ? checkTorrent : pathToData.includes('.') ? checkTorrent.files.find(file => { return pathToData === file.urlPath }) : checkTorrent.files.filter(file => {return file.urlPath.includes(pathToData)})
@@ -308,7 +308,7 @@ class Torrentz {
         checkTorrent.folder = folderPath
         checkTorrent.address = null
         checkTorrent.own = false
-        checkTorrent.title = null
+        checkTorrent.dir = null
         checkTorrent.infohash = checkTorrent.infoHash
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
         this.checkId.set(id, checkTorrent)
@@ -325,8 +325,8 @@ class Torrentz {
       const authorPath = path.join(this._author, id.address)
       if(await fs.pathExists(authorPath)){
         const authorStuff = JSON.parse((await fs.readFile(authorPath)).toString())
-        const folderPath = path.join(this._storage, authorStuff.title)
-        const descriptionPath = path.join(this._description, authorStuff.title)
+        const folderPath = path.join(this._storage, authorStuff.dir)
+        const descriptionPath = path.join(this._description, authorStuff.dir)
         const useOpts = await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else{return {}}})()
 
         const checkTorrent = await Promise.race([
@@ -358,7 +358,7 @@ class Torrentz {
           checkTorrent[prop] = checkProperty[prop]
         }
         const mainPath = path.join(checkTorrent.path, checkTorrent.name)
-        checkTorrent.title = null
+        checkTorrent.dir = null
         checkTorrent.own = true
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
         this.checkId.set(id, checkTorrent)
@@ -398,7 +398,7 @@ class Torrentz {
         }
         const mainPath = path.join(checkTorrent.path, checkTorrent.name)
         checkTorrent.own = false
-        checkTorrent.title = null
+        checkTorrent.dir = null
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
         this.checkId.set(id, checkTorrent)
         return pathToData === '/' ? checkTorrent : pathToData.includes('.') ? checkTorrent.files.find(file => { return pathToData === file.urlPath }) : checkTorrent.files.filter(file => {return file.urlPath.includes(pathToData)})
@@ -414,20 +414,20 @@ class Torrentz {
     const useTimeout = opts.timeout ? opts.timeout * 1000 : this._timeout
     if(id.infohash || id.infohash === null){
 
-      id = id.infohash ? await (async () => {if(this.checkId.has(id.infohash)){this.checkId.delete(id.infohash)}const activeTorrent = this.findTheTorrent(id.infohash);if(activeTorrent){await this.stopTorrent(activeTorrent.infoHash, {destroyStore: false})};return JSON.parse((await fs.readFile(path.join(this._author, id.infohash))).toString());})() : {infohash: null, title: uid(20)}
+      id = id.infohash ? await (async () => {if(this.checkId.has(id.infohash)){this.checkId.delete(id.infohash)}const activeTorrent = this.findTheTorrent(id.infohash);if(activeTorrent){await this.stopTorrent(activeTorrent.infoHash, {destroyStore: false})};return JSON.parse((await fs.readFile(path.join(this._author, id.infohash))).toString());})() : {infohash: null, dir: uid(20)}
       
-      const folderPath = path.join(this._storage, id.title)
+      const folderPath = path.join(this._storage, id.dir)
 
       await fs.ensureDir(folderPath)
 
       const dataPath = path.join(folderPath, pathToData)
-      const descriptionPath = path.join(this._description, id.title)
+      const descriptionPath = path.join(this._description, id.dir)
       const useOpts = await (async () => {if(opts.opt){await fs.writeFile(descriptionPath, JSON.stringify(opts.opt));return opts.opt;}else if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else{return {};}})()
       // const useOpts = await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else if(opts.opt){await fs.writeFile(descriptionPath, JSON.stringify(opts.opt));return opts.opt;}else{return {};}})()
       
       const additionalData = headers ? await this.handleFormData(dataPath, headers, data) : await this.handleRegData(dataPath, data)
       if(additionalData.textData.length){
-        await fs.writeFile(path.join(folderPath, id.title + '-data.txt'), `${additionalData.textData.map(file => {return `${file.key}: ${file.value}\n`})}`, {flag: 'a'})
+        await fs.writeFile(path.join(folderPath, id.dir + '-data.txt'), `${additionalData.textData.map(file => {return `${file.key}: ${file.value}\n`})}`, {flag: 'a'})
       }
       const mainData = additionalData.fileData || additionalData.byItSelf
 
@@ -438,20 +438,20 @@ class Torrentz {
 
       const mainPath = path.join(checkTorrent.path, checkTorrent.name)
       checkTorrent.folder = folderPath
-      checkTorrent.title = id.title
+      checkTorrent.dir = id.dir
       checkTorrent.address = null
       checkTorrent.own = true
       checkTorrent.infohash = checkTorrent.infoHash
       checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
 
-      // if(checkTorrent.infohash !== id.infohash){
-      //   await fs.remove(path.join(this._author, id.infohash))
-      // }
+      if(id.infohash !== null && checkTorrent.infohash !== id.infohash){
+        await fs.remove(path.join(this._author, id.infohash))
+      }
       const authorPath = path.join(this._author, checkTorrent.infohash)
-      await fs.writeFile(authorPath, JSON.stringify({infohash: checkTorrent.infoHash, title: checkTorrent.title}))
+      await fs.writeFile(authorPath, JSON.stringify({infohash: checkTorrent.infoHash, dir: checkTorrent.dir}))
 
       this.checkId.set(checkTorrent.infohash, checkTorrent)
-      return { infohash: checkTorrent.infohash, title: checkTorrent.title, name: checkTorrent.name, length: checkTorrent.length, files: checkTorrent.files, saved: mainData }
+      return { infohash: checkTorrent.infohash, dir: checkTorrent.dir, name: checkTorrent.name, length: checkTorrent.length, files: checkTorrent.files, saved: mainData }
     } else if((id.address && id.secret) || id.title || id.title === null){
 
       if(!id.address || !id.secret){
@@ -468,12 +468,12 @@ class Torrentz {
       const authorPath = path.join(this._author, id.address)
       if (await fs.pathExists(authorPath)) {
         const authorStuff = JSON.parse((await fs.readFile(authorPath)).toString())
-        const folderPath = path.join(this._storage, authorStuff.title)
+        const folderPath = path.join(this._storage, authorStuff.dir)
   
         await fs.ensureDir(folderPath)
   
         const dataPath = path.join(folderPath, pathToData)
-        const descriptionPath = path.join(this._description, authorStuff.title)
+        const descriptionPath = path.join(this._description, authorStuff.dir)
         const useOpts = await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else if(opts.opt){await fs.writeFile(descriptionPath, JSON.stringify(opts.opt));return opts.opt;}else{return {};}})()
   
         const additionalData = headers ? await this.handleFormData(dataPath, headers, data) : data ? await this.handleRegData(dataPath, data) : []
@@ -499,7 +499,7 @@ class Torrentz {
         })
         // don't overwrite the torrent's infohash even though they will both be the same
         checkProperty.folder = folderPath
-        checkProperty.title = authorStuff.title
+        checkProperty.dir = authorStuff.dir
         for (const prop in checkProperty) {
           checkTorrent[prop] = checkProperty[prop]
         }
@@ -514,13 +514,13 @@ class Torrentz {
         this.checkId.set(id.address, checkTorrent)
         return { address: id.address, secret: id.secret, infohash: checkTorrent.infohash, sequence: checkTorrent.sequence, name: checkTorrent.name, length: checkTorrent.length, files: checkTorrent.files, saved: mainData}
       } else {
-        const title = uid(20)
-        const folderPath = path.join(this._storage, title)
+        const dir = uid(20)
+        const folderPath = path.join(this._storage, dir)
   
         await fs.ensureDir(folderPath)
   
         const dataPath = path.join(folderPath, pathToData)
-        const descriptionPath = path.join(this._description, title)
+        const descriptionPath = path.join(this._description, dir)
         const useOpts = await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else if(opts.opt){await fs.writeFile(descriptionPath, JSON.stringify(opts.opt));return opts.opt;}else{return {};}})()
   
         const additionalData = headers ? await this.handleFormData(dataPath, headers, data) : data ? await this.handleRegData(dataPath, data) : []
@@ -546,7 +546,7 @@ class Torrentz {
         })
         // don't overwrite the torrent's infohash even though they will both be the same
         checkProperty.folder = folderPath
-        checkProperty.title = title
+        checkProperty.dir = dir
         for (const prop in checkProperty) {
           checkTorrent[prop] = checkProperty[prop]
         }
@@ -589,8 +589,8 @@ class Torrentz {
       const authorPath = path.join(this._author, info.infohash)
       if(await fs.pathExists(authorPath)){
         const authorStuff = JSON.parse((await fs.readFile(authorPath)).toString()) 
-        const folderPath = path.join(this._storage, authorStuff.title)
-        const descriptionPath = path.join(this._description, authorStuff.title)
+        const folderPath = path.join(this._storage, authorStuff.dir)
+        const descriptionPath = path.join(this._description, authorStuff.dir)
         const dataPath = path.join(folderPath, pathToData)
   
         if(!await fs.pathExists(folderPath)){
@@ -634,7 +634,7 @@ class Torrentz {
           })()
 
           await fs.remove(authorPath)
-          await fs.writeFile(path.join(this._author, dataFromFolder.infoHash), JSON.stringify({infohash: dataFromFolder.infoHash, title: authorStuff.title}))
+          await fs.writeFile(path.join(this._author, dataFromFolder.infoHash), JSON.stringify({infohash: dataFromFolder.infoHash, dir: authorStuff.dir}))
 
           torrentData.infohash = dataFromFolder.infoHash
         }
@@ -694,8 +694,8 @@ class Torrentz {
       const authorPath = path.join(this._author, info.address)
       if(await fs.pathExists(authorPath)){
         const authorStuff = JSON.parse((await fs.readFile(authorPath)).toString()) 
-        const folderPath = path.join(this._storage, authorStuff.title)
-        const descriptionPath = path.join(this._description, authorStuff.title)
+        const folderPath = path.join(this._storage, authorStuff.dir)
+        const descriptionPath = path.join(this._description, authorStuff.dir)
         const dataPath = path.join(folderPath, pathToData)
   
         if(!await fs.pathExists(folderPath)){
@@ -830,29 +830,29 @@ class Torrentz {
     const infoPath = path.join(folderPath, 'info.txt')
     const mainPath = path.join(folderPath, (await fs.readFile(infoPath)).toString())
     const mainArr = await fs.readdir(mainPath, {withFileTypes: true})
-    const title = uid(20)
-    const titlePath = path.join(this._storage, title)
-    await fs.ensureDir(titlePath)
+    const dir = uid(20)
+    const dirPath = path.join(this._storage, dir)
+    await fs.ensureDir(dirPath)
     for(const test of mainArr){
       if(test.isDirectory()){
         const dataPath = path.join(mainPath, test.name)
-        await fsp.cp(dataPath, titlePath, {recursive: true, force: true})
-        // await fs.move(dataPath, titlePath, {overwrite: true})
+        await fsp.cp(dataPath, dirPath, {recursive: true, force: true})
+        // await fs.move(dataPath, dirPath, {overwrite: true})
       }
       if(test.isFile()){
         const dataPath = path.join(mainPath, test.name)
-        const finalPath = path.join(titlePath, test.name)
+        const finalPath = path.join(dirPath, test.name)
         await fsp.cp(dataPath, finalPath, {force: true})
         // await fs.move(dataPath, finalPath, {overwrite: true})
       }
     }
     await fs.remove(folderPath)
-    const descripPath = path.join(this._description, title)
+    const descripPath = path.join(this._description, dir)
     await fs.writeFile(descripPath, JSON.stringify({}))
-    const dataFromTitle = await this.dataFromTorrent(titlePath, {})
+    const dataFromDir = await this.dataFromTorrent(dirPath, {})
     const pairID = this.createKeypair(null)
-    const pubTorrentData = await this.publishFunc(pairID.address, pairID.secret, {ih: dataFromTitle.infoHash}, 0)
-    pubTorrentData.title = title
+    const pubTorrentData = await this.publishFunc(pairID.address, pairID.secret, {ih: dataFromDir.infoHash}, 0)
+    pubTorrentData.dir = dir
     pubTorrentData.echo = id
     const authorPath = path.join(this._author, pairID.address)
     await fs.writeFile(authorPath, JSON.stringify(pubTorrentData))
@@ -860,30 +860,30 @@ class Torrentz {
   }
   async echoHash(id, folderPath){
     const mainArr = await fs.readdir(folderPath, {withFileTypes: true})
-    const title = uid(20)
-    const titlePath = path.join(this._storage, title)
-    await fs.ensureDir(titlePath)
+    const dir = uid(20)
+    const dirPath = path.join(this._storage, dir)
+    await fs.ensureDir(dirPath)
     for(const test of mainArr){
       if(test.isDirectory()){
         const dataPath = path.join(folderPath, test.name)
-        await fsp.cp(dataPath, titlePath, {recursive: true, force: true})
-        // await fs.move(dataPath, titlePath, {overwrite: true})
+        await fsp.cp(dataPath, dirPath, {recursive: true, force: true})
+        // await fs.move(dataPath, dirPath, {overwrite: true})
       }
       if(test.isFile()){
         const dataPath = path.join(folderPath, test.name)
-        const finalPath = path.join(titlePath, test.name)
+        const finalPath = path.join(dirPath, test.name)
         await fsp.cp(dataPath, finalPath, {force: true})
         // await fs.move(dataPath, finalPath, {overwrite: true})
       }
     }
     await fs.remove(folderPath)
-    const descripPath = path.join(this._description, title)
+    const descripPath = path.join(this._description, dir)
     await fs.writeFile(descripPath, JSON.stringify({}))
-    const dataFromTitle = await this.dataFromTorrent(titlePath, {})
-    const pubTorrentData = {infohash: dataFromTitle.infoHash, title: title, echo: id}
-    const authorPath = path.join(this._author, dataFromTitle.infoHash)
+    const dataFromDir = await this.dataFromTorrent(dirPath, {})
+    const pubTorrentData = {infohash: dataFromDir.infoHash, dir: dir, echo: id}
+    const authorPath = path.join(this._author, dataFromDir.infoHash)
     await fs.writeFile(authorPath, JSON.stringify(pubTorrentData))
-    return {infohash: dataFromTitle.infoHash}
+    return {infohash: dataFromDir.infoHash}
   }
   async echoTorrent(id, opts = {}){
     if(!opts){
@@ -979,10 +979,10 @@ class Torrentz {
       if(await fs.pathExists(authorPath)){
         const authorStuff = JSON.parse((await fs.readFile(authorPath)).toString())
         await fs.remove(authorPath)
-        const folderPath = path.join(this._storage, authorStuff.title)
+        const folderPath = path.join(this._storage, authorStuff.dir)
         if(await fs.pathExists(folderPath)){
           await fs.remove(folderPath)
-          const descripPath = path.join(this._description, authorStuff.title)
+          const descripPath = path.join(this._description, authorStuff.dir)
           if(await fs.pathExists(descripPath)){
             await fs.remove(descripPath)
           }
@@ -1019,10 +1019,10 @@ class Torrentz {
       if(await fs.pathExists(authorPath)){
         const authorStuff = JSON.parse((await fs.readFile(authorPath)).toString())
         await fs.remove(authorPath)
-        const folderPath = path.join(this._storage, authorStuff.title)
+        const folderPath = path.join(this._storage, authorStuff.dir)
         if(await fs.pathExists(folderPath)){
           await fs.remove(folderPath)
-          const descripPath = path.join(this._description, authorStuff.title)
+          const descripPath = path.join(this._description, authorStuff.dir)
           if(await fs.pathExists(descripPath)){
             await fs.remove(descripPath)
           }
@@ -1195,9 +1195,9 @@ class Torrentz {
 
   // create a keypair
   createKeypair (data) {
-    // const title = data ? data : uid(20)
+    // const title = data ? data : uid(16)
     // const { publicKey, secretKey } = ed.createKeyPair(Buffer.from(crypto.createHash('sha256').update(title).digest('hex'), 'hex'))
-    const title = data ? data : uid(20)
+    const title = data ? data : uid(16)
     const seed = derive(this._name, this.seedData, title)
     const { publicKey, secretKey } = ed.createKeyPair(seed)
     return { address: publicKey.toString('hex'), secret: secretKey.toString('hex'), title: title }
@@ -1230,8 +1230,8 @@ class Torrentz {
       const parseTest = JSON.parse((await fs.readFile(path.join(this._author, test))).toString())
       if(parseTest.address){
         parseTest.id = parseTest.address
-      } else if(parseTest.title){
-        parseTest.id = parseTest.title
+      } else if(parseTest.dir){
+        parseTest.id = parseTest.dir
       }
       parseFiles.push(parseTest)
     }
@@ -1251,9 +1251,9 @@ class Torrentz {
         if(parseTest.address){
           adr.add(parseTest.address)
           parseFiles.push({address: parseTest.address, infohash: parseTest.infohash, id: parseTest.address})
-        } else if(parseTest.title){
-          tle.add(parseTest.title)
-          parseFiles.push({title: parseTest.title, infohash: parseTest.infohash, id: parseTest.title})
+        } else if(parseTest.dir){
+          tle.add(parseTest.dir)
+          parseFiles.push({dir: parseTest.dir, infohash: parseTest.infohash, id: parseTest.dir})
         }
       }
       const dirFiles = await fs.readdir(this._storage, {withFileTypes: false})
@@ -1274,7 +1274,7 @@ class Torrentz {
         const parseTest = JSON.parse((await fs.readFile(path.join(this._author, test))).toString())
         if(parseTest.address){
           parseFiles.push(parseTest.address)
-        } else if(parseTest.title){
+        } else if(parseTest.dir){
           parseFiles.push(parseTest.infohash)
         }
       }
