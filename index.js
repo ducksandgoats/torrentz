@@ -512,7 +512,7 @@ class Torrentz {
         // }
         await fs.writeFile(authorPath, JSON.stringify(checkProperty))
         this.checkId.set(id.address, checkTorrent)
-        return { address: id.address, secret: id.secret, infohash: checkTorrent.infohash, sequence: checkTorrent.sequence, name: checkTorrent.name, length: checkTorrent.length, files: checkTorrent.files, saved: mainData}
+        return { address: id.address, secret: id.secret, title: id.title, infohash: checkTorrent.infohash, sequence: checkTorrent.sequence, name: checkTorrent.name, length: checkTorrent.length, files: checkTorrent.files, saved: mainData}
       } else {
         const dir = uid(20)
         const folderPath = path.join(this._storage, dir)
@@ -558,7 +558,7 @@ class Torrentz {
         await fs.writeFile(authorPath, JSON.stringify(checkProperty))
         
         this.checkId.set(id.address, checkTorrent)
-        return { address: id.address, secret: id.secret, infohash: checkTorrent.infohash, sequence: checkTorrent.sequence, name: checkTorrent.name, length: checkTorrent.length, files: checkTorrent.files, saved: mainData}
+        return { address: id.address, secret: id.secret, title: id.title, infohash: checkTorrent.infohash, sequence: checkTorrent.sequence, name: checkTorrent.name, length: checkTorrent.length, files: checkTorrent.files, saved: mainData}
       }
     } else {
       throw new Error('title or address/secret is needed or needs to be null')
