@@ -279,13 +279,13 @@ class Torrentz {
           }
           throw new Error('infohash does not match with the given infohash')
         }
-        const mainPath = path.join(checkTorrent.path, checkTorrent.name)
+        // const mainPath = path.join(checkTorrent.path, checkTorrent.name)
         checkTorrent.folder = folderPath
         checkTorrent.address = null
         checkTorrent.own = true
         checkTorrent.infohash = checkTorrent.infoHash
         checkTorrent.dir = authorStuff.dir
-        checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
+        checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
         this.checkId.set(id, checkTorrent)
         return pathToData === '/' ? checkTorrent : pathToData.includes('.') ? checkTorrent.files.find(file => { return pathToData === file.urlPath }) : checkTorrent.files.filter(file => {return file.urlPath.includes(pathToData)})
       } else {
@@ -304,13 +304,13 @@ class Torrentz {
           }
           throw err
         })
-        const mainPath = path.join(checkTorrent.path, checkTorrent.name)
+        // const mainPath = path.join(checkTorrent.path, checkTorrent.name)
         checkTorrent.folder = folderPath
         checkTorrent.address = null
         checkTorrent.own = false
         checkTorrent.dir = null
         checkTorrent.infohash = checkTorrent.infoHash
-        checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
+        checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
         this.checkId.set(id, checkTorrent)
         return pathToData === '/' ? checkTorrent : pathToData.includes('.') ? checkTorrent.files.find(file => { return pathToData === file.urlPath }) : checkTorrent.files.filter(file => {return file.urlPath.includes(pathToData)})
       }
@@ -357,10 +357,10 @@ class Torrentz {
         for (const prop in checkProperty) {
           checkTorrent[prop] = checkProperty[prop]
         }
-        const mainPath = path.join(checkTorrent.path, checkTorrent.name)
+        // const mainPath = path.join(checkTorrent.path, checkTorrent.name)
         checkTorrent.dir = null
         checkTorrent.own = true
-        checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
+        checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
         this.checkId.set(id.address, checkTorrent)
         return pathToData === '/' ? checkTorrent : pathToData.includes('.') ? checkTorrent.files.find(file => { return pathToData === file.urlPath }) : checkTorrent.files.filter(file => {return file.urlPath.includes(pathToData)})
       } else {
@@ -396,10 +396,10 @@ class Torrentz {
         for (const prop in checkProperty) {
           checkTorrent[prop] = checkProperty[prop]
         }
-        const mainPath = path.join(checkTorrent.path, checkTorrent.name)
+        // const mainPath = path.join(checkTorrent.path, checkTorrent.name)
         checkTorrent.own = false
         checkTorrent.dir = null
-        checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
+        checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
         this.checkId.set(id.address, checkTorrent)
         return pathToData === '/' ? checkTorrent : pathToData.includes('.') ? checkTorrent.files.find(file => { return pathToData === file.urlPath }) : checkTorrent.files.filter(file => {return file.urlPath.includes(pathToData)})
       }
@@ -436,13 +436,13 @@ class Torrentz {
         this.startTorrent(folderPath, { ...useOpts, destroyStoreOnDestroy: false })
       ])
 
-      const mainPath = path.join(checkTorrent.path, checkTorrent.name)
+      // const mainPath = path.join(checkTorrent.path, checkTorrent.name)
       checkTorrent.folder = folderPath
       checkTorrent.dir = id.dir
       checkTorrent.address = null
       checkTorrent.own = true
       checkTorrent.infohash = checkTorrent.infoHash
-      checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
+      checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
 
       if(id.infohash && checkTorrent.infohash !== id.infohash){
         await fs.remove(path.join(this._author, id.infohash))
@@ -505,9 +505,9 @@ class Torrentz {
         for (const prop in checkProperty) {
           checkTorrent[prop] = checkProperty[prop]
         }
-        const mainPath = path.join(checkTorrent.path, checkTorrent.name)
+        // const mainPath = path.join(checkTorrent.path, checkTorrent.name)
         checkTorrent.own = true
-        checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
+        checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
         // if(checkProperty.infohash !== authorStuff.infohash){
         //   // await fs.remove(authorPath)
         //   await fs.writeFile(authorPath, JSON.stringify(checkProperty))
@@ -552,9 +552,9 @@ class Torrentz {
         for (const prop in checkProperty) {
           checkTorrent[prop] = checkProperty[prop]
         }
-        const mainPath = path.join(checkTorrent.path, checkTorrent.name)
+        // const mainPath = path.join(checkTorrent.path, checkTorrent.name)
         checkTorrent.own = true
-        checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(mainPath.length).replace(/\\/, '/')})
+        checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
   
         const authorPath = path.join(this._author, checkProperty.address)
         await fs.writeFile(authorPath, JSON.stringify(checkProperty))
