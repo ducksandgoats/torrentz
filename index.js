@@ -129,7 +129,8 @@ class Torrentz {
   async ownData (data, infoHash) {
     const hashBuff = Buffer.from(infoHash, 'hex')
     const signatureBuff = Buffer.from(data.sig, 'hex')
-    const encodedSignatureData = this.encodeSigData({ seq: data.sequence, v: { ih: hashBuff, ...data.stuff } })
+    const stuffBuff = this.stuffToBuff(data.stuff)
+    const encodedSignatureData = this.encodeSigData({ seq: data.sequence, v: { ih: hashBuff, ...stuffBuff } })
     const addressBuff = Buffer.from(data.address, 'hex')
 
     if (!ed.verify(signatureBuff, encodedSignatureData, addressBuff)) {
@@ -137,7 +138,7 @@ class Torrentz {
     }
 
     const putData = await new Promise((resolve, reject) => {
-      this.webtorrent.dht.put({ k: addressBuff, v: {ih: hashBuff, ...data.stuff}, seq: data.sequence, sig: signatureBuff }, (putErr, hash, number) => {
+      this.webtorrent.dht.put({ k: addressBuff, v: {ih: hashBuff, ...stuffBuff}, seq: data.sequence, sig: signatureBuff }, (putErr, hash, number) => {
         if (putErr) {
           reject(putErr)
         } else {
@@ -268,7 +269,7 @@ class Torrentz {
         const descriptionPath = path.join(this._description, authorStuff.dir)
         const useOpts = await (async () => {if(await fs.pathExists(descriptionPath)){const test = await fs.readFile(descriptionPath);return JSON.parse(test.toString());}else{return {}}})()
         const checkTorrent = await Promise.race([
-          this.delayTimeOut(useTimeout, this.errName(new Error(id + ' took too long, it timed out'), 'ErrorTimeout'), false),
+          this.delayTimeOut(useTimeout, this.errName(new Error(id.infohash + ' took too long, it timed out'), 'ErrorTimeout'), false),
           this.startTorrent(folderPath, { ...useOpts, destroyStoreOnDestroy: false })
         ])
         if(checkTorrent.infoHash !== authorStuff.infohash){
@@ -286,16 +287,16 @@ class Torrentz {
         checkTorrent.infohash = checkTorrent.infoHash
         checkTorrent.dir = authorStuff.dir
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
-        this.checkId.set(id, checkTorrent)
+        this.checkId.set(checkTorrent.infohash, checkTorrent)
         return pathToData === '/' ? checkTorrent : pathToData.includes('.') ? checkTorrent.files.find(file => { return pathToData === file.urlPath }) : checkTorrent.files.filter(file => {return file.urlPath.includes(pathToData)})
       } else {
-        const folderPath = path.join(this._storage, id)
+        const folderPath = path.join(this._storage, id.infohash)
         const checkTorrent = await Promise.race([
-          this.delayTimeOut(useTimeout, this.errName(new Error(id + ' took too long, it timed out'), 'ErrorTimeout'), false),
-          this.midTorrent(id, { path: folderPath, destroyStoreOnDestroy: false })
+          this.delayTimeOut(useTimeout, this.errName(new Error(id.infohash + ' took too long, it timed out'), 'ErrorTimeout'), false),
+          this.midTorrent(id.infohash, { path: folderPath, destroyStoreOnDestroy: false })
         ]).catch(err => {
           try {
-            const haveIt = this.findTheTorrent(id)
+            const haveIt = this.findTheTorrent(id.infohash)
             if(haveIt){
               this.webtorrent.remove(haveIt.infoHash, { destroyStore: false })
             }
@@ -311,7 +312,7 @@ class Torrentz {
         checkTorrent.dir = null
         checkTorrent.infohash = checkTorrent.infoHash
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
-        this.checkId.set(id, checkTorrent)
+        this.checkId.set(checkTorrent.infohash, checkTorrent)
         return pathToData === '/' ? checkTorrent : pathToData.includes('.') ? checkTorrent.files.find(file => { return pathToData === file.urlPath }) : checkTorrent.files.filter(file => {return file.urlPath.includes(pathToData)})
       }
     } else if(id.address || id.title){
@@ -361,7 +362,7 @@ class Torrentz {
         checkTorrent.dir = null
         checkTorrent.own = true
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
-        this.checkId.set(id.address, checkTorrent)
+        this.checkId.set(checkTorrent.address, checkTorrent)
         return pathToData === '/' ? checkTorrent : pathToData.includes('.') ? checkTorrent.files.find(file => { return pathToData === file.urlPath }) : checkTorrent.files.filter(file => {return file.urlPath.includes(pathToData)})
       } else {
         const folderPath = path.join(this._storage, id.address)
@@ -400,7 +401,7 @@ class Torrentz {
         checkTorrent.own = false
         checkTorrent.dir = null
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
-        this.checkId.set(id.address, checkTorrent)
+        this.checkId.set(checkTorrent.address, checkTorrent)
         return pathToData === '/' ? checkTorrent : pathToData.includes('.') ? checkTorrent.files.find(file => { return pathToData === file.urlPath }) : checkTorrent.files.filter(file => {return file.urlPath.includes(pathToData)})
       }
     } else {
@@ -513,7 +514,7 @@ class Torrentz {
         //   await fs.writeFile(authorPath, JSON.stringify(checkProperty))
         // }
         await fs.writeFile(authorPath, JSON.stringify(checkProperty))
-        this.checkId.set(id.address, checkTorrent)
+        this.checkId.set(checkTorrent.address, checkTorrent)
         return { id: checkTorrent.address, secret: id.secret, title: id.title, address: checkTorrent.address, infohash: checkTorrent.infohash, sequence: checkTorrent.sequence, name: checkTorrent.name, length: checkTorrent.length, files: checkTorrent.files, saved: mainData}
       } else {
         const dir = uid(20)
@@ -559,7 +560,7 @@ class Torrentz {
         const authorPath = path.join(this._author, checkProperty.address)
         await fs.writeFile(authorPath, JSON.stringify(checkProperty))
         
-        this.checkId.set(id.address, checkTorrent)
+        this.checkId.set(checkTorrent.address, checkTorrent)
         return { id: checkTorrent.address, secret: id.secret, title: id.title, address: checkTorrent.address, infohash: checkTorrent.infohash, sequence: checkTorrent.sequence, name: checkTorrent.name, length: checkTorrent.length, files: checkTorrent.files, saved: mainData}
       }
     } else {
