@@ -10,7 +10,7 @@ const wrtc = require('wrtc')
 const createTorrent = require('create-torrent')
 const parseTorrent = require('parse-torrent')
 const {uid} = require('uid')
-const fsp = require('fs/promises')
+// const fsp = require('fs/promises')
 const glob = require("glob")
 const crypto = require('crypto')
 const derive = require('derive-key')
@@ -837,13 +837,13 @@ class Torrentz {
     for(const test of mainArr){
       if(test.isDirectory()){
         const dataPath = path.join(mainPath, test.name)
-        await fsp.cp(dataPath, dirPath, {recursive: true, force: true})
+        await fs.move(dataPath, dirPath, {overwrite: true})
         // await fs.move(dataPath, dirPath, {overwrite: true})
       }
       if(test.isFile()){
         const dataPath = path.join(mainPath, test.name)
         const finalPath = path.join(dirPath, test.name)
-        await fsp.cp(dataPath, finalPath, {force: true})
+        await fs.move(dataPath, finalPath, {overwrite: true})
         // await fs.move(dataPath, finalPath, {overwrite: true})
       }
     }
@@ -867,13 +867,13 @@ class Torrentz {
     for(const test of mainArr){
       if(test.isDirectory()){
         const dataPath = path.join(folderPath, test.name)
-        await fsp.cp(dataPath, dirPath, {recursive: true, force: true})
+        await fs.move(dataPath, dirPath, {overwrite: true})
         // await fs.move(dataPath, dirPath, {overwrite: true})
       }
       if(test.isFile()){
         const dataPath = path.join(folderPath, test.name)
         const finalPath = path.join(dirPath, test.name)
-        await fsp.cp(dataPath, finalPath, {force: true})
+        await fs.move(dataPath, finalPath, {overwrite: true})
         // await fs.move(dataPath, finalPath, {overwrite: true})
       }
     }
