@@ -575,7 +575,6 @@ class Torrentz {
     const useTimeout = opts.timeout ? opts.timeout * 1000 : this._timeout
 
     if(info.infohash){
-      const kindOfId = 'infohash'
       if(this.checkId.has(info.infohash)){
         this.checkId.delete(info.infohash)
       }
@@ -608,7 +607,7 @@ class Torrentz {
           if(await fs.pathExists(descriptionPath)){
             await fs.remove(descriptionPath)
           }
-          return {id: info.infohash, path: pathToData, type: kindOfId, torrent: {}}
+          return {id: info.infohash, path: pathToData, torrent: {}}
         } else {
           if(await fs.pathExists(dataPath)){
             await fs.remove(dataPath)
@@ -638,7 +637,7 @@ class Torrentz {
           await fs.remove(authorPath)
           await fs.writeFile(path.join(this._author, dataFromFolder.infoHash), JSON.stringify({infohash: dataFromFolder.infoHash, dir: authorStuff.dir}))
 
-          return {id: info.infohash, path: pathToData, type: kindOfId, torrent: {infohash: dataFromFolder.infoHash}}
+          return {id: info.infohash, path: pathToData, torrent: {infohash: dataFromFolder.infoHash}}
         }
       } else {
         const folderPath = path.join(this._storage, info.infohash)
@@ -656,7 +655,7 @@ class Torrentz {
           if(await fs.pathExists(descriptionPath)){
             await fs.remove(descriptionPath)
           }
-          return {id: info.infohash, path: pathToData, type: kindOfId, torrent: {}}
+          return {id: info.infohash, path: pathToData, torrent: {}}
         } else {
           let wasItFound = null
           const dirPath = await fs.readdir(folderPath, {withFileTypes: true})
@@ -685,7 +684,7 @@ class Torrentz {
               throw new Error('torrent can not be empty')
             }
             const testData = await this.echoHash(info.infohash, folderPath)
-            return {id: info.infohash, type: kindOfId, torrent: {infohash: testData.infohash}}
+            return {id: info.infohash, torrent: {infohash: testData.infohash}}
           } else {
             throw new Error('did not find the path')
           }
@@ -693,7 +692,6 @@ class Torrentz {
         }
       }
     } else if((info.address && info.secret) || info.title){
-      const kindOfId = 'address'
       info = info.title ? this.createKeypair(info.title) : info
       const authorPath = path.join(this._author, info.address)
       if(await fs.pathExists(authorPath)){
@@ -716,7 +714,7 @@ class Torrentz {
           if(await fs.pathExists(descriptionPath)){
             await fs.remove(descriptionPath)
           }
-          return {id: info.address, path: pathToData, type: kindOfId, torrent: {}}
+          return {id: info.address, path: pathToData, torrent: {}}
         } else {
           if(!info.secret){
             throw new Error('secret key is request')
@@ -756,7 +754,7 @@ class Torrentz {
   
           await fs.writeFile(authorPath, JSON.stringify(dataFromProp))
   
-          return {id: info.address, path: pathToData, type: kindOfId, torrent: {address: authorStuff.address}}
+          return {id: info.address, path: pathToData, torrent: {address: authorStuff.address}}
         }
       } else {
         const folderPath = path.join(this._storage, info.address)
@@ -774,7 +772,7 @@ class Torrentz {
           if(await fs.pathExists(descriptionPath)){
             await fs.remove(descriptionPath)
           }
-          return {id: info.address, path: pathToData, type: kindOfId, torrent: {}}
+          return {id: info.address, path: pathToData, torrent: {}}
         } else {
           const mainPath = path.join(folderPath, 'info.txt')
           const dataPath = path.join(folderPath, (await fs.readFile(mainPath)).toString())
@@ -805,7 +803,7 @@ class Torrentz {
               throw new Error('torrent can not be empty')
             }
             const testData = await this.echoAddress(info.address, folderPath)
-            return {id: info.address, path: pathToData, type: kindOfId, torrent: testData}
+            return {id: info.address, path: pathToData, torrent: testData}
           } else {
             throw new Error('did not find the path')
           }
