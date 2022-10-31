@@ -611,7 +611,7 @@ class Torrentz {
         } else {
           if(await fs.pathExists(dataPath)){
             await fs.remove(dataPath)
-            if(!(await this.getAllFiles(folderPath)).length){
+            if(!(await this.getAllFiles('**/*', {cwd: folderPath, strict: false, nodir: true})).length){
               await fs.remove(authorPath)
               await fs.remove(folderPath)
               await fs.remove(descriptionPath)
@@ -678,7 +678,7 @@ class Torrentz {
           }
           if(wasItFound){
             await fs.remove(wasItFound)
-            if(!(await this.getAllFiles(folderPath)).length){
+            if(!(await this.getAllFiles('**/*', {cwd: folderPath, strict: false, nodir: true})).length){
               await fs.remove(folderPath)
               await fs.remove(descriptionPath)
               throw new Error('torrent can not be empty')
@@ -721,7 +721,7 @@ class Torrentz {
           }
           if(await fs.pathExists(dataPath)){
             await fs.remove(dataPath)
-            if(!(await this.getAllFiles(folderPath)).length){
+            if(!(await this.getAllFiles('**/*', {cwd: folderPath, strict: false, nodir: true})).length){
               await fs.remove(authorPath)
               await fs.remove(folderPath)
               await fs.remove(descriptionPath)
@@ -797,7 +797,7 @@ class Torrentz {
           }
           if(wasItFound){
             await fs.remove(wasItFound)
-            if(!(await this.getAllFiles(dataPath)).length){
+            if(!(await this.getAllFiles('**/*', {cwd: dataPath, strict: false, nodir: true})).length){
               await fs.remove(folderPath)
               await fs.remove(descriptionPath)
               throw new Error('torrent can not be empty')
@@ -837,14 +837,12 @@ class Torrentz {
     for(const test of mainArr){
       if(test.isDirectory()){
         const dataPath = path.join(mainPath, test.name)
-        await fs.move(dataPath, dirPath, {overwrite: true})
-        // await fs.move(dataPath, dirPath, {overwrite: true})
+        await fs.copy(dataPath, dirPath, {overwrite: true})
       }
       if(test.isFile()){
         const dataPath = path.join(mainPath, test.name)
         const finalPath = path.join(dirPath, test.name)
-        await fs.move(dataPath, finalPath, {overwrite: true})
-        // await fs.move(dataPath, finalPath, {overwrite: true})
+        await fs.copy(dataPath, finalPath, {overwrite: true})
       }
     }
     await fs.remove(folderPath)
@@ -867,14 +865,12 @@ class Torrentz {
     for(const test of mainArr){
       if(test.isDirectory()){
         const dataPath = path.join(folderPath, test.name)
-        await fs.move(dataPath, dirPath, {overwrite: true})
-        // await fs.move(dataPath, dirPath, {overwrite: true})
+        await fs.copy(dataPath, dirPath, {overwrite: true})
       }
       if(test.isFile()){
         const dataPath = path.join(folderPath, test.name)
         const finalPath = path.join(dirPath, test.name)
-        await fs.move(dataPath, finalPath, {overwrite: true})
-        // await fs.move(dataPath, finalPath, {overwrite: true})
+        await fs.copy(dataPath, finalPath, {overwrite: true})
       }
     }
     await fs.remove(folderPath)
@@ -1064,9 +1060,9 @@ class Torrentz {
       throw new Error('id is not valid')
     }
   }
-  getAllFiles(usePath){
+  getAllFiles(data, opts){
     return new Promise((resolve, reject) => {
-      glob('**/*', {cwd: usePath, strict: false, nodir: true}, function (err, files) {
+      glob(data, opts, function (err, files) {
         if(err){
           reject(err)
         } else {
