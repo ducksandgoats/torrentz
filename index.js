@@ -845,7 +845,12 @@ class Torrentz {
         await fs.copy(dataPath, finalPath, {overwrite: true})
       }
     }
-    await fs.remove(folderPath)
+    try {
+      await fs.remove(folderPath)
+    } catch (err) {
+      await fs.remove(dirPath)
+      throw err
+    }
     const descripPath = path.join(this._description, dir)
     await fs.writeFile(descripPath, JSON.stringify({}))
     const dataFromDir = await this.dataFromTorrent(dirPath, {})
@@ -873,7 +878,12 @@ class Torrentz {
         await fs.copy(dataPath, finalPath, {overwrite: true})
       }
     }
-    await fs.remove(folderPath)
+    try {
+      await fs.remove(folderPath)
+    } catch (err) {
+      await fs.remove(dirPath)
+      throw err
+    }
     const descripPath = path.join(this._description, dir)
     await fs.writeFile(descripPath, JSON.stringify({}))
     const dataFromDir = await this.dataFromTorrent(dirPath, {})
