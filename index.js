@@ -21,7 +21,7 @@ const derive = require('derive-key')
 
 class Torrentz {
   constructor (opts = {}) {
-    const defOpts = { folder: __dirname, storage: 'storage', author: 'author', description: 'description', timeout: 60000, routine: 3600000, align: true }
+    const defOpts = { folder: __dirname, storage: 'storage', author: 'author', description: 'description', user: 'user', timeout: 60000, routine: 3600000, align: true }
     const finalOpts = { ...defOpts, ...opts }
     this._timeout = finalOpts.timeout
     this._routine = finalOpts.routine
@@ -37,6 +37,7 @@ class Torrentz {
     this._storage = path.join(this._folder, finalOpts.storage)
     this._author = path.join(this._folder, finalOpts.author)
     this._description = path.join(this._folder, finalOpts.description)
+    this._user = path.join(this._folder, finalOpts.user)
     this._name = 'hybrid'
     this._seed = path.join(this._folder, 'seed')
     if (!fs.pathExistsSync(this._storage)) {
@@ -53,6 +54,9 @@ class Torrentz {
     } else {
       this.seedData = crypto.randomBytes(32)
       fs.writeFileSync(this._seed, this.seedData)
+    }
+    if (!fs.pathExistsSync(this._user)) {
+      fs.ensureDirSync(this._user)
     }
 
     // this.webtorrent = finalOpts.webtorrent ? finalOpts.webtorrent : new WebTorrent({ dht: { verify: ed.verify }, tracker: {wrtc} })
@@ -78,6 +82,58 @@ class Torrentz {
         this.keepUpdated().then(data => console.log('amount of torrents:', data)).catch(error => console.error('routine update had a reject', error))
       }
     }, this._routine)
+  }
+
+  async userTorrent(torrent, pathToData, opts = {}) {
+    if (!opts) {
+      opts = {}
+    }
+    const useId = torrent.infohash || torrent.address || this.createKeypair(torrent.title).address
+    const torrentStuff = await this.loadTorrent(torrent, pathToData)
+    if (torrentStuff.infoHash) {
+      // saves all files in the user dir
+      for (const test of torrentStuff.files) {
+        const dataToSave = await new Promise((resolve, reject) => {
+          test.getBuffer((err, buf) => {
+            if (err) {
+              return reject(err)
+            }
+            return resolve(buf)
+          })
+        })
+        const dataPathToSave = opts.id ? path.join(this._user, torrentStuff.address || torrentStuff.infohash, torrentStuff.path) : path.join(this._user, torrentStuff.path)
+        await fs.writeFile(dataPathToSave, dataToSave.buffer)
+        return dataPathToSave
+      }
+    } else if (Array.isArray(torrentStuff)) {
+      for (const test of torrentStuff) {
+        const dataToSave = await new Promise((resolve, reject) => {
+          test.getBuffer((err, buf) => {
+            if (err) {
+              return reject(err)
+            }
+            return resolve(buf)
+          })
+        })
+        const dataPathToSave = opts.id ? path.join(this._user, `${useId}`, torrentStuff.path) : path.join(this._user, torrentStuff.path)
+        await fs.writeFile(dataPathToSave, dataToSave.buffer)
+        return dataPathToSave
+      }
+    } else if (torrentStuff) {
+        const dataToSave = await new Promise((resolve, reject) => {
+          test.getBuffer((err, buf) => {
+            if (err) {
+              return reject(err)
+            }
+            return resolve(buf)
+          })
+        })
+      const dataPathToSave = opts.id ? path.join(this._user, `${useId}`, torrentStuff.path) : path.join(this._user, torrentStuff.path)
+      await fs.writeFile(dataPathToSave, dataToSave.buffer)
+      return dataPathToSave
+    } else {
+      throw new Error('did not find any torrent data')
+    }
   }
 
   encodeSigData (msg) {
