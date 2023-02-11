@@ -1,6 +1,6 @@
 {
   "name": "torrentz",
-  "version": "8.0.1",
+  "version": "8.0.2",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,6 @@
   "license": "ISC",
   "dependencies": {
     "bencode": "^2.0.2",
-    "busboy": "^1.6.0",
     "create-torrent": "^5.0.6",
     "derive-key": "^1.0.1",
     "ed25519-supercop": "^2.0.1",
@@ -19,6 +18,7 @@
     "glob": "^8.0.3",
     "parse-torrent": "^9.1.5",
     "simple-sha1": "^3.1.0",
+    "streamx": "^2.13.2",
     "uid": "^2.0.0",
     "webtorrent": "^1.8.31",
     "wrtc": "^0.4.7"
