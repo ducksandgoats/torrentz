@@ -1282,7 +1282,7 @@ class Torrentz {
         await fs.remove(path.join(this._storage, iter))
       }
     }
-    return data ? parseFiles : parseFiles.map((data) => {if (data.address) {return data.address} else if (data.dir) {data.infohash}})
+    return data ? parseFiles : parseFiles.map((data) => {if (data.address) {return data.address} else {return data.infohash}})
   }
 }
 
