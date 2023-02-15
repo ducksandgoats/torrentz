@@ -1,6 +1,6 @@
 {
   "name": "torrentz",
-  "version": "8.0.8",
+  "version": "8.0.9",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -12,10 +12,10 @@
   "dependencies": {
     "bencode": "^2.0.2",
     "create-torrent": "^5.0.6",
-    "derive-key": "^1.0.1",
     "ed25519-supercop": "^2.0.1",
     "fs-extra": "^10.1.0",
     "glob": "^8.0.3",
+    "level": "^8.0.0",
     "parse-torrent": "^9.1.5",
     "simple-sha1": "^3.1.0",
     "streamx": "^2.13.2",

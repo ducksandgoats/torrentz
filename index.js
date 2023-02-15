@@ -11,6 +11,7 @@ const parseTorrent = require('parse-torrent')
 const {uid} = require('uid')
 const glob = require("glob")
 const crypto = require('crypto')
+const { Level } = require('level')
 
 // saves us from saving secret keys(saving secret keys even encrypted secret keys is something i want to avoid)
 // with this function which was taken from the bittorrent-dht package
@@ -18,7 +19,7 @@ const crypto = require('crypto')
 
 class Torrentz {
   constructor (opts = {}) {
-    const defOpts = { folder: __dirname, storage: 'storage', author: 'author', description: 'description', user: 'user', routine: 3600000 }
+    const defOpts = { folder: __dirname, storage: 'storage', author: 'author', description: 'description', base: 'base', user: 'user', routine: 3600000 }
     const finalOpts = { ...defOpts, ...opts }
     // this._timeout = finalOpts.timeout
     this._routine = finalOpts.routine
@@ -34,8 +35,7 @@ class Torrentz {
     this._author = path.join(this._folder, finalOpts.author)
     this._description = path.join(this._folder, finalOpts.description)
     this._user = path.join(this._folder, finalOpts.user)
-    this._name = 'hybrid'
-    this._seed = path.join(this._folder, 'seed')
+    this._base = path.join(this._folder, finalOpts.base)
     if (!fs.pathExistsSync(this._storage)) {
       fs.ensureDirSync(this._storage)
     }
@@ -45,18 +45,16 @@ class Torrentz {
     if (!fs.pathExistsSync(this._description)) {
       fs.ensureDirSync(this._description)
     }
-    if(fs.pathExistsSync(this._seed)){
-      this.seedData = fs.readFileSync(this._seed)
-    } else {
-      this.seedData = crypto.randomBytes(32)
-      fs.writeFileSync(this._seed, this.seedData)
-    }
     if (!fs.pathExistsSync(this._user)) {
       fs.ensureDirSync(this._user)
     }
+    if (!fs.pathExistsSync(this._base)) {
+      fs.ensureDirSync(this._base)
+    }
 
     // this.webtorrent = finalOpts.webtorrent ? finalOpts.webtorrent : new WebTorrent({ dht: { verify: ed.verify }, tracker: {wrtc} })
-    this.webtorrent = new WebTorrent({ ...finalOpts, dht: { verify: ed.verify }, tracker: {wrtc} })
+    this.webtorrent = new WebTorrent({ ...finalOpts, dht: { verify: ed.verify }, tracker: { wrtc } })
+    this.db = new Level(this._base, { valueEncoding: 'json' })
 
     globalThis.WEBTORRENT_ANNOUNCE = createTorrent.announceList.map(arr => arr[0]).filter(url => url.indexOf('wss://') === 0 || url.indexOf('ws://') === 0)
     globalThis.WRTC = wrtc
