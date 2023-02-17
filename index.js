@@ -310,7 +310,15 @@ class Torrentz {
       if(testTorrent){
         return testTorrent
       }
-      const authorStuff = await this.db.get(`${this._fixed.seed}${id.infohash}`)
+      const authorStuff = await new Promise((resolve, reject) => {
+        this.db.get(`${this._fixed.seed}${id.infohash}`, (err, data) => {
+          if (err) {
+            resolve(null)
+          } else {
+            resolve(data)
+          }
+        })
+      })
       if (authorStuff) {
         const folderPath = path.join(this._storage, authorStuff.dir)
         const checkTorrent = await this.handleTheData({ id: authorStuff.infohash, num: useTimeout, kind: 'start', res: false }, this.startTorrent(folderPath, { ...authorStuff.desc, destroyStoreOnDestroy: false }), async () => {await this.stopTorrent(authorStuff.infohash, { destroyStore: false })})
@@ -345,7 +353,15 @@ class Torrentz {
       if(testTorrent){
         return testTorrent
       }
-      const authorStuff = await this.db.get(`${this._fixed.seed}${id.address}`)
+      const authorStuff = await new Promise((resolve, reject) => {
+        this.db.get(`${this._fixed.seed}${id.address}`, (err, data) => {
+          if (err) {
+            resolve(null)
+          } else {
+            resolve(data)
+          }
+        })
+      })
       if(authorStuff){
         const folderPath = path.join(this._storage, authorStuff.dir)
         const checkTorrent = await this.handleTheData({ id: authorStuff.address, num: useTimeout, kind: 'start', res: false }, this.startTorrent(folderPath, { ...authorStuff.desc, destroyStoreOnDestroy: true }), async () => {await this.stopTorrent(authorStuff.infohash, { destroyStore: false })})
@@ -402,7 +418,7 @@ class Torrentz {
     const useTimeout = opts.timeout
     if(id.infohash || id.infohash === null){
 
-      const authorStuff = id.infohash ? await (async () => { await this.takeOutTorrent(id.infohash, { destroyStore: false }); const test = await this.db.get(`${this._fixed.seed}${id.infohash}`); if (test) { return test; }else{throw new Error('did not find infohash')};})() : {infohash: null, dir: uid(20), desc: {}}
+      const authorStuff = id.infohash ? await (async () => { await this.takeOutTorrent(id.infohash, { destroyStore: false }); return await this.db.get(`${this._fixed.seed}${id.infohash}`);})() : {infohash: null, dir: uid(20), desc: {}}
       
       const folderPath = path.join(this._storage, authorStuff.dir)
 
@@ -447,7 +463,7 @@ class Torrentz {
         throw new Error('data is invalid')
       }
 
-      const authorStuff = id.provided ? await (async () => { const test = await this.db.get(`${this._fixed.seed}${id.address}`); if (test) { return test; } else { throw new Error('could not find address'); } })() : {address: id.address, sequence: null, dir: uid(20), desc: {}, stuff: {}}
+      const authorStuff = id.provided ? await (async () => {return await this.db.get(`${this._fixed.seed}${id.address}`);})() : {address: id.address, sequence: null, dir: uid(20), desc: {}, stuff: {}}
       const folderPath = path.join(this._storage, authorStuff.dir)
 
       // await fs.ensureDir(folderPath)
@@ -496,7 +512,15 @@ class Torrentz {
   
       const activeTorrent = await this.handleTheData({ id: info.infohash, num: useTimeout, kind: 'stop', res: false }, this.stopTorrent(info.infohash, { destroyStore: false }), null)
 
-      const authorStuff = await this.db.get(`${this._fixed.seed}${info.infohash}`)
+      const authorStuff = await new Promise((resolve, reject) => {
+        this.db.get(`${this._fixed.seed}${info.infohash}`, (err, data) => {
+          if (err) {
+            resolve(null)
+          } else {
+            resolve(data)
+          }
+        })
+      })
       if(authorStuff){
         const folderPath = path.join(this._storage, authorStuff.dir)
         const dataPath = path.join(folderPath, pathToData)
@@ -545,7 +569,15 @@ class Torrentz {
           return {id: info.infohash, path: pathToData, infohash: dataFromFolder.infoHash, activeTorrent}
         }
       } else {
-        const nfoData = await this.db.get(`${this._fixed.load}${info.infohash}`)
+        const nfoData = await new Promise((resolve, reject) => {
+          this.db.get(`${this._fixed.load}${info.infohash}`, (err, data) => {
+            if (err) {
+              resolve(null)
+            } else {
+              resolve(data)
+            }
+          })
+        })
         const folderPath = path.join(this._storage, nfoData.infohash)
   
         if(!await fs.pathExists(folderPath)){
@@ -581,7 +613,15 @@ class Torrentz {
       }
       const activeTorrent = await this.handleTheData({ id: info.address, num: useTimeout, kind: 'stop', res: false }, this.stopTorrent(info.address, { destroyStore: false }), null)
 
-      const authorStuff = await this.db.get(`${this._fixed.seed}${info.address}`)
+      const authorStuff = await new Promise((resolve, reject) => {
+        this.db.get(`${this._fixed.seed}${info.address}`, (err, data) => {
+          if (err) {
+            resolve(null)
+          } else {
+            resolve(data)
+          }
+        })
+      })
       if(authorStuff){
         const folderPath = path.join(this._storage, authorStuff.dir)
         const dataPath = path.join(folderPath, pathToData)
@@ -632,7 +672,15 @@ class Torrentz {
           return {id: info.address, path: pathToData, address: authorStuff.address, activeTorrent}
         }
       } else {
-        const nfoData = await this.db.get(`${this._fixed.load}${info.address}`)
+        const nfoData = await new Promise((resolve, reject) => {
+          this.db.get(`${this._fixed.load}${info.address}`, (err, data) => {
+            if (err) {
+              resolve(null)
+            } else {
+              resolve(data)
+            }
+          })
+        })
         const folderPath = path.join(this._storage, nfoData.address)
   
         if(!await fs.pathExists(folderPath)){
