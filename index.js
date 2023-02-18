@@ -701,6 +701,9 @@ class Torrentz {
     pubTorrentData.desc = descripPath
     pubTorrentData.echo = id
     await this.db.put(`${this._fixed.seed}${this._fixed.address}${pubTorrentData.address}`, pubTorrentData)
+    for (const test in pairID) {
+      pubTorrentData[test] = pairID[test]
+    }
     return pubTorrentData
   }
   async echoHash(id, folderPath, movePath, opts){
