@@ -18,16 +18,16 @@ const { Level } = require('level')
 
 class Torrentz {
   constructor (opts = {}) {
-    const defOpts = { folder: __dirname, storage: 'storage', base: 'base', user: 'user', routine: 3600000 }
+    const defOpts = { dir: __dirname, storage: 'storage', base: 'base', user: 'user', routine: 3600000 }
     const finalOpts = { ...defOpts, ...opts }
     // this._timeout = finalOpts.timeout
     this._routine = finalOpts.routine
     this.checkHash = /^[a-fA-F0-9]{40}$/
 
-    finalOpts.folder = path.resolve(finalOpts.folder)
-    this._storage = path.join(finalOpts.folder, finalOpts.storage)
-    this._user = path.join(finalOpts.folder, finalOpts.user)
-    this._base = path.join(finalOpts.folder, finalOpts.base)
+    finalOpts.dir = path.resolve(finalOpts.dir)
+    this._storage = path.join(finalOpts.dir, finalOpts.storage)
+    this._user = path.join(finalOpts.dir, finalOpts.user)
+    this._base = path.join(finalOpts.dir, finalOpts.base)
     fs.ensureDirSync(this._storage)
     fs.ensureDirSync(this._user)
     fs.ensureDirSync(this._base)
