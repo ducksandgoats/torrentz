@@ -77,7 +77,7 @@ class Torrentz {
           })
         })
         const dataPathToSave = opts.id ? path.join(this._user, useId, test.path) : path.join(this._user, test.path)
-        await fs.writeFile(dataPathToSave, dataToSave.buffer)
+        await fs.writeFile(dataPathToSave, dataToSave)
         return dataPathToSave
       }
     } else if (Array.isArray(torrentStuff)) {
@@ -91,7 +91,7 @@ class Torrentz {
           })
         })
         const dataPathToSave = opts.id ? path.join(this._user, `${useId}`, test.path) : path.join(this._user, test.path)
-        await fs.writeFile(dataPathToSave, dataToSave.buffer)
+        await fs.writeFile(dataPathToSave, dataToSave)
         return dataPathToSave
       }
     } else if (torrentStuff.getBuffer) {
@@ -104,7 +104,7 @@ class Torrentz {
           })
         })
       const dataPathToSave = opts.id ? path.join(this._user, `${useId}`, torrentStuff.path) : path.join(this._user, torrentStuff.path)
-      await fs.writeFile(dataPathToSave, dataToSave.buffer)
+      await fs.writeFile(dataPathToSave, dataToSave)
       return dataPathToSave
     } else {
       throw new Error('did not find any torrent data')
