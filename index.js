@@ -63,49 +63,23 @@ class Torrentz {
       opts = {}
     }
     const useTimeout = opts.timeout
-    const useId = torrent.infohash || torrent.address
+    // const useId = torrent.infohash || torrent.address
+    const placeToSave = opts.id ? path.join(this._user, torrent.infohash || torrent.address) : path.join(this._user)
     const torrentStuff = await this.loadTorrent(torrent, pathToData, {timeout: useTimeout})
     if (torrentStuff.infoHash) {
       // saves all files in the user dir
       for (const test of torrentStuff.files) {
-        const dataToSave = await new Promise((resolve, reject) => {
-          test.getBuffer((err, buf) => {
-            if (err) {
-              return reject(err)
-            }
-            return resolve(buf)
-          })
-        })
-        const dataPathToSave = opts.id ? path.join(this._user, useId, test.path) : path.join(this._user, test.path)
-        await fs.writeFile(dataPathToSave, dataToSave.buffer)
-        return dataPathToSave
+        await pipelinePromise(Readable.from(test.createReadStream()), fs.createWriteStream(path.join(placeToSave, test.path)))
       }
+      return placeToSave
     } else if (Array.isArray(torrentStuff)) {
       for (const test of torrentStuff) {
-        const dataToSave = await new Promise((resolve, reject) => {
-          test.getBuffer((err, buf) => {
-            if (err) {
-              return reject(err)
-            }
-            return resolve(buf)
-          })
-        })
-        const dataPathToSave = opts.id ? path.join(this._user, `${useId}`, test.path) : path.join(this._user, test.path)
-        await fs.writeFile(dataPathToSave, dataToSave.buffer)
-        return dataPathToSave
+        await pipelinePromise(Readable.from(test.createReadStream()), fs.createWriteStream(path.join(placeToSave, test.path)))
       }
-    } else if (torrentStuff.getBuffer) {
-        const dataToSave = await new Promise((resolve, reject) => {
-          test.getBuffer((err, buf) => {
-            if (err) {
-              return reject(err)
-            }
-            return resolve(buf)
-          })
-        })
-      const dataPathToSave = opts.id ? path.join(this._user, `${useId}`, torrentStuff.path) : path.join(this._user, torrentStuff.path)
-      await fs.writeFile(dataPathToSave, dataToSave.buffer)
-      return dataPathToSave
+      return placeToSave
+    } else if (torrentStuff.createReadStream) {
+      await pipelinePromise(Readable.from(torrentStuff.createReadStream()), fs.createWriteStream(path.join(placeToSave, torrentStuff.path)))
+      return placeToSave
     } else {
       throw new Error('did not find any torrent data')
     }
