@@ -335,7 +335,7 @@ class Torrentz {
         const folderPath = path.join(this._storage, id.infohash)
         const checkTorrent = await this.handleTheData({ id: id.infohash, num: useTimeout, kind: 'mid', res: false }, this.midTorrent(id.infohash, { path: folderPath, destroyStoreOnDestroy: false }), {err: true, cb: async () => { await this.stopTorrent(id.infohash, { destroyStore: false }) }})
         checkTorrent.infohash = checkTorrent.infoHash
-        await this.handleTheData({num: 0}, this.db.put(`${this._fixed.load}${this._fixed.infohash}${checkTorrent.infohash}`, {infohash: checkTorrent.infohash, name: checkTorrent.name, dir: checkTorrent.dir}), {err: true, cb: async () => { await this.stopTorrent(checkTorrent.infohash, { destroyStore: false }) }})
+        await this.handleTheData({num: 0}, this.db.put(`${this._fixed.load}${this._fixed.infohash}${checkTorrent.infohash}`, {size: checkTorrent.length, length: checkTorrent.files.length, infohash: checkTorrent.infohash, name: checkTorrent.name, dir: checkTorrent.dir}), {err: true, cb: async () => { await this.stopTorrent(checkTorrent.infohash, { destroyStore: false }) }})
         checkTorrent.folder = folderPath
         checkTorrent.address = null
         checkTorrent.own = false
@@ -387,7 +387,7 @@ class Torrentz {
         for (const prop in checkProperty) {
           checkTorrent[prop] = checkProperty[prop]
         }
-        await this.handleTheData({num: 0}, this.db.put(`${this._fixed.load}${this._fixed.address}${checkTorrent.address}`, {address: checkTorrent.address, infohash: checkTorrent.infohash, name: checkTorrent.name}), {err: true, cb: async () => {await this.stopTorrent(checkTorrent.address, { destroyStore: false })}})
+        await this.handleTheData({num: 0}, this.db.put(`${this._fixed.load}${this._fixed.address}${checkTorrent.address}`, {size: checkTorrent.length, length: checkTorrent.files.length, address: checkTorrent.address, infohash: checkTorrent.infohash, name: checkTorrent.name}), {err: true, cb: async () => {await this.stopTorrent(checkTorrent.address, { destroyStore: false })}})
         // const mainPath = path.join(checkTorrent.path, checkTorrent.name)
         checkTorrent.own = false
         checkTorrent.dir = null
@@ -435,6 +435,8 @@ class Torrentz {
           await this.db.del(`${this._fixed.seed}${this._fixed.infohash}${authorStuff.infohash}`)
         }
         authorStuff.infohash = checkTorrent.infoHash
+        authorStuff.size = checkTorrent.length
+        authorStuff.length = checkTorrent.files.length
       }
       await this.db.put(`${this._fixed.seed}${this._fixed.infohash}${authorStuff.infohash}`, authorStuff)
 
@@ -478,6 +480,8 @@ class Torrentz {
       // checkProperty.folder = folderPath
       checkProperty.dir = authorStuff.dir
       checkProperty.desc = authorStuff.desc
+      checkProperty.size = checkTorrent.length
+      checkProperty.length = checkTorrent.files.length
 
       await this.db.put(`${this._fixed.seed}${this._fixed.address}${checkProperty.address}`, checkProperty)
 
@@ -542,6 +546,8 @@ class Torrentz {
           if (authorStuff.infohash !== dataFromFolder.infoHash) {
             await this.db.del(`${this._fixed.seed}${this._fixed.infohash}${authorStuff.infohash}`)
             authorStuff.infohash = dataFromFolder.infoHash
+            authorStuff.size = dataFromFolder.length
+            authorStuff.length = dataFromFolder.files.length
           }
           
           await this.db.put(`${this._fixed.seed}${this._fixed.infohash}${authorStuff.infohash}`, authorStuff)
@@ -630,6 +636,8 @@ class Torrentz {
           const dataFromProp = await this.handleTheData({id: info.address, num: 0, kind: 'publish', res: false}, this.publishFunc(authorStuff.address, info.secret, {...authorStuff.stuff, ih: dataFromFolder.infoHash}, authorStuff.sequence + 1), {err: true, cb: null})
           dataFromProp.dir = authorStuff.dir
           dataFromProp.desc = authorStuff.desc
+          dataFromProp.size = dataFromFolder.length
+          dataFromProp.length = dataFromFolder.files.length
 
           await this.db.put(`${this._fixed.seed}${this._fixed.address}${dataFromProp.address}`, dataFromProp)
   
@@ -700,6 +708,8 @@ class Torrentz {
     pubTorrentData.dir = dir
     pubTorrentData.desc = descripPath
     pubTorrentData.echo = id
+    pubTorrentData.size = dataFromDir.length
+    pubTorrentData.length = dataFromDir.files.length
     await this.db.put(`${this._fixed.seed}${this._fixed.address}${pubTorrentData.address}`, pubTorrentData)
     for (const test in pairID) {
       pubTorrentData[test] = pairID[test]
@@ -716,7 +726,7 @@ class Torrentz {
     await fs.remove(folderPath)
     await this.db.del(`${this._fixed.load}${this._fixed.infohash}${id}`)
     const dataFromDir = await this.dataFromTorrent(dirPath, descripPath)
-    const pubTorrentData = {infohash: dataFromDir.infoHash, dir: dir, echo: id, desc: descripPath}
+    const pubTorrentData = { infohash: dataFromDir.infoHash, dir: dir, echo: id, desc: descripPath, size: dataFromDir.length, length: dataFromDir.files.length }
     await this.db.put(`${this._fixed.seed}${this._fixed.infohash}${pubTorrentData.infohash}`, pubTorrentData)
     return pubTorrentData
   }
