@@ -69,16 +69,22 @@ class Torrentz {
     if (torrentStuff.infoHash) {
       // saves all files in the user dir
       for (const test of torrentStuff.files) {
-        await pipelinePromise(Readable.from(test.createReadStream()), fs.createWriteStream(path.join(placeToSave, test.path)))
+        const testPath = path.join(placeToSave, test.path)
+        await fs.ensureDir(path.dirname(testPath))
+        await pipelinePromise(Readable.from(test.createReadStream()), fs.createWriteStream(testPath))
       }
       return placeToSave
     } else if (Array.isArray(torrentStuff)) {
       for (const test of torrentStuff) {
-        await pipelinePromise(Readable.from(test.createReadStream()), fs.createWriteStream(path.join(placeToSave, test.path)))
+        const testPath = path.join(placeToSave, test.path)
+        await fs.ensureDir(path.dirname(testPath))
+        await pipelinePromise(Readable.from(test.createReadStream()), fs.createWriteStream(testPath))
       }
       return placeToSave
     } else if (torrentStuff.createReadStream) {
-      await pipelinePromise(Readable.from(torrentStuff.createReadStream()), fs.createWriteStream(path.join(placeToSave, torrentStuff.path)))
+      const testPath = path.join(placeToSave, torrentStuff.path)
+      await fs.ensureDir(path.dirname(testPath))
+      await pipelinePromise(Readable.from(torrentStuff.createReadStream()), fs.createWriteStream(testPath))
       return placeToSave
     } else {
       throw new Error('did not find any torrent data')
