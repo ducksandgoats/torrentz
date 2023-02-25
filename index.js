@@ -100,7 +100,7 @@ class Torrentz {
   // keep data active in the dht, runs every hour
   async keepUpdated () {
     this._readyToGo = false
-    for await(const parsedData of this.db.values({gt: `${this._fixed.seed}${this._fixed.address}`})){
+    for await(const parsedData of this.db.values({gt: `${this._fixed.seed}${this._fixed.address}`, lt: `${this._fixed.seed}${this._fixed.infohash}`})){
       try {
         await this.saveData(parsedData)
       } catch (err) {
