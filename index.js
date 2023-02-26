@@ -256,9 +256,7 @@ class Torrentz {
       if (!hasIt) {
         this.checkId.set(mainData.address || mainData.infohash, mainData)
       }
-      if (pathToData === '/') {
-        return mainData
-      } else if (path.extname(pathToData)) {
+      if (path.extname(pathToData)) {
         return mainData.files.find(file => { return pathToData === file.urlPath })
       } else {
         return mainData.files.filter(file => {return file.urlPath.startsWith(pathToData)})
@@ -271,9 +269,7 @@ class Torrentz {
 
   sendTheTorrent(id, pathToData, torrent) {
     this.checkId.set(id, torrent)
-    if (pathToData === '/') {
-      return torrent
-    } else if (path.extname(pathToData)) {
+    if (path.extname(pathToData)) {
       return torrent.files.find(file => { return pathToData === file.urlPath })
     } else {
       return torrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
