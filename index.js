@@ -267,6 +267,54 @@ class Torrentz {
     }
   }
 
+  checkStat(id, pathToData) {
+    const hasIt = this.checkId.has(id)
+    const mainData = hasIt ? this.checkId.get(id) : this.findTheTorrent(id)
+    if (mainData) {
+      if (!hasIt) {
+        this.checkId.set(mainData.address || mainData.infohash, mainData)
+      }
+      if (path.extname(pathToData)) {
+        return mainData.files.find(file => { return pathToData === file.urlPath }) ? 'file' : null
+      } else {
+        return mainData.files.filter(file => {return file.urlPath.startsWith(pathToData)}).length ? 'folder' : null
+      }
+    } else {
+      // return null
+      return mainData
+    }
+  }
+
+  checkFile(id, pathToData) {
+    const hasIt = this.checkId.has(id)
+    const mainData = hasIt ? this.checkId.get(id) : this.findTheTorrent(id)
+    if (mainData) {
+      if (!hasIt) {
+        this.checkId.set(mainData.address || mainData.infohash, mainData)
+      }
+      const test = mainData.files.find(file => { return pathToData === file.urlPath })
+      return test ? test : null
+    } else {
+      // return null
+      return mainData
+    }
+  }
+
+  checkFolder(id, pathToData) {
+    const hasIt = this.checkId.has(id)
+    const mainData = hasIt ? this.checkId.get(id) : this.findTheTorrent(id)
+    if (mainData) {
+      if (!hasIt) {
+        this.checkId.set(mainData.address || mainData.infohash, mainData)
+      }
+      const test = mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })
+      return test.length ? test : null
+    } else {
+      // return null
+      return mainData
+    }
+  }
+
   sendTheTorrent(id, pathToData, torrent) {
     this.checkId.set(id, torrent)
     if (path.extname(pathToData)) {
