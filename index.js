@@ -763,20 +763,18 @@ class Torrentz {
 
   async handleFormData(folderPath, data, fullPath, sec) {
     await fs.ensureDir(folderPath)
-    const saved = []
     for (const info of data) {
       const tempPath = path.join(folderPath, info.name)
       await this.handleTheData({ id: tempPath, num: sec, res: false, kind: 'formdata' }, pipelinePromise(Readable.from(info.stream()), fs.createWriteStream(tempPath)), {err: true, cb: null})
-      saved.push(path.join(fullPath, info.name).replace(/\\/g, '/'))
     }
-    return saved
+    return fullPath
   }
 
   async handleRegData(mainPath, body, fullPath, sec) {
     const checkDir = path.dirname(mainPath)
     await fs.ensureDir(checkDir)
     await this.handleTheData({ id: mainPath, num: sec, res: false, kind: 'regdata' }, pipelinePromise(Readable.from(body), fs.createWriteStream(mainPath)), {err: true, cb: null})
-    return [fullPath]
+    return fullPath
   }
 
   // -------------- the below functions are BEP46 helpers ----------------
