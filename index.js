@@ -365,7 +365,6 @@ class Torrentz {
           this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false }) 
           throw new Error('infohash does not match with the given infohash')
         }
-        // const mainPath = path.join(checkTorrent.path, checkTorrent.name)
         checkTorrent.folder = folderPath
         checkTorrent.address = null
         checkTorrent.own = true
@@ -405,7 +404,6 @@ class Torrentz {
         for (const prop in checkProperty) {
           checkTorrent[prop] = checkProperty[prop]
         }
-        // const mainPath = path.join(checkTorrent.path, checkTorrent.name)
         checkTorrent.dir = null
         checkTorrent.own = true
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
@@ -428,7 +426,6 @@ class Torrentz {
           checkTorrent[prop] = checkProperty[prop]
         }
         await this.handleTheData({num: 0}, this.db.put(`${this._fixed.load}${this._fixed.address}${checkTorrent.address}`, {size: checkTorrent.length, length: checkTorrent.files.length, address: checkTorrent.address, infohash: checkTorrent.infohash, name: checkTorrent.name}), {err: true, cb: async () => {await this.stopTorrent(checkTorrent.address, { destroyStore: false })}})
-        // const mainPath = path.join(checkTorrent.path, checkTorrent.name)
         checkTorrent.own = false
         checkTorrent.dir = null
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
@@ -808,7 +805,7 @@ class Torrentz {
   async handleFormData(folderPath, data, fullPath, sec) {
     await fs.ensureDir(folderPath)
     for (const info of data) {
-      const tempPath = path.join(folderPath, info.name)
+      const tempPath = path.join(folderPath, info.webkitRelativePath || info.name)
       await this.handleTheData({ id: tempPath, num: sec, res: false, kind: 'formdata' }, pipelinePromise(Readable.from(info.stream()), fs.createWriteStream(tempPath)), {err: true, cb: null})
     }
     return fullPath
