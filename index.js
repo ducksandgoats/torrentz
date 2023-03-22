@@ -91,6 +91,36 @@ class Torrentz {
     }
   }
 
+  async checkUserData(pathToData){
+    const checkPath = path.join(this._user, pathToData)
+    if(await fs.pathExists(checkPath)){
+      const statPath = await fs.stat(checkPath)
+      if(statPath.isDirectory()){
+        statPath.type = 'folder'
+        const fold = await fs.readdir(checkPath)
+        return {stat: statPath, folder: fold}
+      } else if(statPath.isFile()){
+        statPath.type = 'file'
+        const fil = await fs.readFile(checkPath)
+        return {stat: statPath, file: fil}
+      } else {
+        throw new Error('must be a directory or file')
+      }
+    } else {
+      throw new Error('path does not exist')
+    }
+  }
+
+  async trashUserData(pathToData){
+    const checkPath = path.join(this._user, pathToData)
+    if(await fs.pathExists(checkPath)){
+      await fs.remove(checkPath)
+      return checkPath + ' was removed'
+    } else {
+      throw new Error('path does not exist')
+    }
+  }
+
   encodeSigData (msg) {
     const ref = { seq: msg.seq, v: msg.v }
     if (msg.salt) ref.salt = msg.salt
