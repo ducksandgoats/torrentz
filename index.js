@@ -97,12 +97,10 @@ class Torrentz {
       const statPath = await fs.stat(checkPath)
       if(statPath.isDirectory()){
         statPath.type = 'folder'
-        const fold = await fs.readdir(checkPath)
-        return {stat: statPath, folder: fold}
+        return {stat: statPath, folder: await fs.readdir(checkPath)}
       } else if(statPath.isFile()){
         statPath.type = 'file'
-        const fil = await fs.readFile(checkPath)
-        return {stat: statPath, file: fil}
+        return {stat: statPath, file: checkPath}
       } else {
         throw new Error('must be a directory or file')
       }
