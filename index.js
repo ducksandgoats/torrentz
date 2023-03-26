@@ -477,7 +477,7 @@ class Torrentz {
       // await fs.ensureDir(folderPath)
       
       const dataPath = path.join(folderPath, pathToData)
-      authorStuff.desc = opts.opt || authorStuff.desc
+      authorStuff.desc = opts.desc || authorStuff.desc
       
       const saved = Array.isArray(data) ? await this.handleFormData(dataPath, data, pathToData, useTimeout) : await this.handleRegData(dataPath, data, pathToData, useTimeout)
       const extraFile = path.join(folderPath, 'neta.json')
@@ -524,7 +524,7 @@ class Torrentz {
 
       const dataPath = path.join(folderPath, pathToData)
       authorStuff.sequence = opts.count ? opts.count : authorStuff.sequence === null ? 0 : authorStuff.sequence + 1
-      authorStuff.desc = opts.opt || authorStuff.desc
+      authorStuff.desc = opts.desc || authorStuff.desc
       authorStuff.stuff = opts.stuff || authorStuff.stuff
 
       const saved = Array.isArray(data) ? await this.handleFormData(dataPath, data, pathToData, useTimeout) : await this.handleRegData(dataPath, data, pathToData, useTimeout)
@@ -595,7 +595,7 @@ class Torrentz {
             throw new Error('path is not valid')
           }
 
-          authorStuff.desc = opts.opt || authorStuff.desc
+          authorStuff.desc = opts.desc || authorStuff.desc
   
           const dataFromFolder = await this.handleTheData({ id: authorStuff.infohash, num: useTimeout, kind: 'torrent', res: false }, this.dataFromTorrent(folderPath, authorStuff.desc), {err: true, cb: async () => {await fs.remove(folderPath);await this.db.del(`${this._fixed.seed}${this._fixed.infohash}${authorStuff.infohash}`);}})
 
@@ -677,7 +677,7 @@ class Torrentz {
             throw new Error('path is invalid')
           }
           
-          authorStuff.desc = opts.opt ? opts.opt : authorStuff.desc ? authorStuff.desc : {}
+          authorStuff.desc = opts.desc || authorStuff.desc || {}
   
           const dataFromFolder = await this.handleTheData({ id: authorStuff.address, num: useTimeout, kind: 'torrent', res: false }, this.dataFromTorrent(folderPath, authorStuff.desc), {err: true, cb: async () => {await fs.remove(folderPath);await this.db.del(`${this._fixed.seed}${this._fixed.address}${authorStuff.address}`);}})
 
@@ -741,14 +741,17 @@ class Torrentz {
     })
     return parseTorrent(test)
   }
-  async echoAddress(id, folderPath, mainPath, opts){
+  async echoAddress(id, folderPath, mainPath, opts) {
+    if (!opts) {
+      opts = {}
+    }
     const dir = uid(20)
     const dirPath = path.join(this._storage, dir)
     await fs.ensureDir(dirPath)
     await fs.copy(mainPath, dirPath, {overwrite: true})
     await fs.remove(folderPath)
     await this.db.del(`${this._fixed.load}${this._fixed.address}${id}`)
-    const descripPath = opts.opt || {}
+    const descripPath = opts.desc || {}
     const stuffPath = opts.stuff || {}
     const dataFromDir = await this.dataFromTorrent(dirPath, descripPath)
     const pairID = this.createKeypair()
@@ -766,7 +769,10 @@ class Torrentz {
   }
   async echoHash(id, folderPath, movePath, opts){
     // const mainArr = await fs.readdir(folderPath, {withFileTypes: true})
-    const descripPath = opts.opt || {}
+    if (!opts) {
+      opts = {}
+    }
+    const descripPath = opts.desc || {}
     const dir = uid(20)
     const dirPath = path.join(this._storage, dir)
     await fs.ensureDir(dirPath)
