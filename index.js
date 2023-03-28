@@ -18,7 +18,7 @@ const { Level } = require('level')
 
 class Torrentz {
   constructor (opts = {}) {
-    const defOpts = { dir: __dirname, storage: 'storage', base: 'base', user: 'user', routine: 3600000 }
+    const defOpts = { dir: __dirname, storage: 'storage', base: 'base', routine: 3600000 }
     const finalOpts = { ...defOpts, ...opts }
     // this._timeout = finalOpts.timeout
     this._routine = finalOpts.routine
@@ -26,10 +26,8 @@ class Torrentz {
 
     finalOpts.dir = path.resolve(finalOpts.dir)
     this._storage = path.join(finalOpts.dir, finalOpts.storage)
-    this._user = path.join(finalOpts.dir, finalOpts.user)
     this._base = path.join(finalOpts.dir, finalOpts.base)
     fs.ensureDirSync(this._storage)
-    fs.ensureDirSync(this._user)
     fs.ensureDirSync(this._base)
 
     // this.webtorrent = finalOpts.webtorrent ? finalOpts.webtorrent : new WebTorrent({ dht: { verify: ed.verify }, tracker: {wrtc} })
@@ -56,67 +54,6 @@ class Torrentz {
         this.keepUpdated().then(data => console.log('amount of torrents:', data)).catch(error => console.error('routine update had a reject', error))
       }
     }, this._routine)
-  }
-
-  async userTorrent(torrent, pathToData, opts = {}) {
-    if (!opts) {
-      opts = {}
-    }
-    const useTimeout = opts.timeout
-    // const useId = torrent.infohash || torrent.address
-    const placeToSave = opts.id ? path.join(this._user, torrent.infohash || torrent.address) : path.join(this._user)
-    const torrentStuff = await this.loadTorrent(torrent, pathToData, {timeout: useTimeout})
-    if (torrentStuff.infoHash) {
-      // saves all files in the user dir
-      for (const test of torrentStuff.files) {
-        const testPath = path.join(placeToSave, test.path)
-        await fs.ensureDir(path.dirname(testPath))
-        await pipelinePromise(Readable.from(test.createReadStream()), fs.createWriteStream(testPath))
-      }
-      return placeToSave
-    } else if (Array.isArray(torrentStuff)) {
-      for (const test of torrentStuff) {
-        const testPath = path.join(placeToSave, test.path)
-        await fs.ensureDir(path.dirname(testPath))
-        await pipelinePromise(Readable.from(test.createReadStream()), fs.createWriteStream(testPath))
-      }
-      return placeToSave
-    } else if (torrentStuff.createReadStream) {
-      const testPath = path.join(placeToSave, torrentStuff.path)
-      await fs.ensureDir(path.dirname(testPath))
-      await pipelinePromise(Readable.from(torrentStuff.createReadStream()), fs.createWriteStream(testPath))
-      return placeToSave
-    } else {
-      throw new Error('did not find any torrent data')
-    }
-  }
-
-  async checkUserData(pathToData){
-    const checkPath = path.join(this._user, pathToData)
-    if(await fs.pathExists(checkPath)){
-      const statPath = await fs.stat(checkPath)
-      if(statPath.isDirectory()){
-        statPath.type = 'folder'
-        return {stat: statPath, folder: await fs.readdir(checkPath)}
-      } else if(statPath.isFile()){
-        statPath.type = 'file'
-        return {stat: statPath, file: checkPath}
-      } else {
-        throw new Error('must be a directory or file')
-      }
-    } else {
-      throw new Error('path does not exist')
-    }
-  }
-
-  async trashUserData(pathToData){
-    const checkPath = path.join(this._user, pathToData)
-    if(await fs.pathExists(checkPath)){
-      await fs.remove(checkPath)
-      return checkPath + ' was removed'
-    } else {
-      throw new Error('path does not exist')
-    }
   }
 
   encodeSigData (msg) {
