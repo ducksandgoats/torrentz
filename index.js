@@ -811,6 +811,11 @@ class Torrentz {
     return { address: publicKey.toString('hex'), secret: secretKey.toString('hex'), pair: pair.toString('hex') }
   }
 
+  generateKeypair (data) {
+    const { publicKey, secretKey } = ed.createKeyPair(data)
+    return { address: publicKey.toString('hex'), secret: secretKey.toString('hex'), pair: data.toString('hex') }
+  }
+
   // obj to buff for stuff
   stuffToBuff(data){
     const obj = {}
