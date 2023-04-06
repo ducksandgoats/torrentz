@@ -460,7 +460,7 @@ class Torrentz {
       // await fs.ensureDir(folderPath)
 
       const dataPath = path.join(folderPath, pathToData)
-      authorStuff.sequence = opts.count ? opts.count : authorStuff.sequence === null ? 0 : authorStuff.sequence + 1
+      authorStuff.sequence = opts.seq ? opts.seq : authorStuff.sequence === null ? 0 : authorStuff.sequence + 1
       authorStuff.desc = opts.desc || authorStuff.desc
       authorStuff.stuff = opts.stuff || authorStuff.stuff
 
