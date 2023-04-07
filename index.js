@@ -454,13 +454,13 @@ class Torrentz {
         throw new Error('data is invalid')
       }
 
-      const authorStuff = id.provided ? await (async () => {return await this.db.get(`${this._fixed.seed}${this._fixed.address}${id.address}`);})() : {address: id.address, sequence: null, dir: uid(20), desc: {}, stuff: {}}
+      const authorStuff = id.provided ? await (async () => { let test; try { test = await this.db.get(`${this._fixed.seed}${this._fixed.address}${id.address}`); test.sequence = test.sequence + 1; } catch (e) { console.error(e); test = { address: id.address, sequence: 0, dir: uid(20), desc: {}, stuff: {} }; } return test; })() : {address: id.address, sequence: 0, dir: uid(20), desc: {}, stuff: {}}
       const folderPath = path.join(this._storage, authorStuff.dir)
 
       // await fs.ensureDir(folderPath)
 
       const dataPath = path.join(folderPath, pathToData)
-      authorStuff.sequence = opts.seq ? opts.seq : authorStuff.sequence === null ? 0 : authorStuff.sequence + 1
+      authorStuff.sequence = opts.seq || authorStuff.sequence
       authorStuff.desc = opts.desc || authorStuff.desc
       authorStuff.stuff = opts.stuff || authorStuff.stuff
 
