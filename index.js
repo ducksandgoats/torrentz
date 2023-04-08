@@ -83,7 +83,8 @@ class Torrentz {
     return this.webtorrent.torrents.length
   }
 
-  async emptyTorrent(dir, id, data) {
+  async emptyTorrent(dir, data, prop) {
+    const id = data.address || data.infohash
     await new Promise((resolve, reject) => {
       data.destroy({destroyStore: false}, (err) => {
         if (err) {
@@ -94,6 +95,7 @@ class Torrentz {
       })
     })
     await fs.remove(dir)
+    await this.db.del(`${prop}${id}`)
     throw new Error(id + ' is empty')
   }
 
@@ -304,7 +306,8 @@ class Torrentz {
         const folderPath = path.join(this._storage, id.infohash)
         const checkTorrent = await this.handleTheData({ id: id.infohash, num: useTimeout, kind: 'mid', res: false }, this.midTorrent(id.infohash, { path: folderPath, destroyStoreOnDestroy: false }), { err: true, cb: async () => { await this.stopTorrent(id.infohash, { destroyStore: false }) } })
         if (!checkTorrent.files.length) {
-          await this.emptyTorrent(folderPath, id.infohash, checkTorrent)
+          checkTorrent.infohash = checkTorrent.infoHash
+          await this.emptyTorrent(folderPath, checkTorrent, `${this._fixed.load}${this._fixed.infohash}`)
         }
         checkTorrent.infohash = checkTorrent.infoHash
         await this.handleTheData({num: 0}, this.db.put(`${this._fixed.load}${this._fixed.infohash}${checkTorrent.infohash}`, {size: checkTorrent.length, length: checkTorrent.files.length, infohash: checkTorrent.infohash, name: checkTorrent.name, dir: checkTorrent.dir}), {err: true, cb: async () => { await this.stopTorrent(checkTorrent.infohash, { destroyStore: false }) }})
@@ -353,7 +356,8 @@ class Torrentz {
 
         const checkTorrent = await this.handleTheData({ id: checkProperty.address, num: useTimeout, kind: 'mid', res: false }, this.midTorrent(checkProperty.infohash, { path: dataPath, destroyStoreOnDestroy: false }), { err: true, cb: async () => { await this.stopTorrent(checkProperty.infohash, { destroyStore: false }) } })
         if (!checkTorrent.files.length) {
-          await this.emptyTorrent(folderPath, id.address, checkTorrent)
+          checkTorrent.address = checkProperty.address
+          await this.emptyTorrent(folderPath, checkTorrent, `${this._fixed.load}${this._fixed.address}`)
         }
         // don't overwrite the torrent's infohash even though they will both be the same
         for (const prop in checkProperty) {
