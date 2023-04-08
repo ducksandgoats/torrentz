@@ -83,6 +83,20 @@ class Torrentz {
     return this.webtorrent.torrents.length
   }
 
+  async emptyTorrent(dir, id, data) {
+    await new Promise((resolve, reject) => {
+      data.destroy({destroyStore: false}, (err) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve()
+        }
+      })
+    })
+    await fs.remove(dir)
+    throw new Error(id + ' is empty')
+  }
+
   async handleTheData(useTimeOut, waitForData, useCaught) {
     try {
       if (useTimeOut.num) {
@@ -223,56 +237,7 @@ class Torrentz {
         return mainData.files.filter(file => {return file.urlPath.startsWith(pathToData)})
       }
     } else {
-      // return null
-      return mainData
-    }
-  }
-
-  checkStat(id, pathToData) {
-    const hasIt = this.checkId.has(id)
-    const mainData = hasIt ? this.checkId.get(id) : this.findTheTorrent(id)
-    if (mainData) {
-      if (!hasIt) {
-        this.checkId.set(mainData.address || mainData.infohash, mainData)
-      }
-      if (path.extname(pathToData)) {
-        return mainData.files.find(file => { return pathToData === file.urlPath }) ? 'file' : null
-      } else {
-        return mainData.files.filter(file => {return file.urlPath.startsWith(pathToData)}).length ? 'folder' : null
-      }
-    } else {
-      // return null
-      return mainData
-    }
-  }
-
-  checkFile(id, pathToData) {
-    const hasIt = this.checkId.has(id)
-    const mainData = hasIt ? this.checkId.get(id) : this.findTheTorrent(id)
-    if (mainData) {
-      if (!hasIt) {
-        this.checkId.set(mainData.address || mainData.infohash, mainData)
-      }
-      const test = mainData.files.find(file => { return pathToData === file.urlPath })
-      return test ? test : null
-    } else {
-      // return null
-      return mainData
-    }
-  }
-
-  checkFolder(id, pathToData) {
-    const hasIt = this.checkId.has(id)
-    const mainData = hasIt ? this.checkId.get(id) : this.findTheTorrent(id)
-    if (mainData) {
-      if (!hasIt) {
-        this.checkId.set(mainData.address || mainData.infohash, mainData)
-      }
-      const test = mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })
-      return test.length ? test : null
-    } else {
-      // return null
-      return mainData
+      return null
     }
   }
 
@@ -315,7 +280,7 @@ class Torrentz {
 
     if(id.infohash){
       const testTorrent = this.checkForTorrent(id.infohash, pathToData)
-      if(testTorrent){
+      if(testTorrent !== null){
         return testTorrent
       }
       const authorStuff = await this.handleTheData({num: 0}, this.db.get(`${this._fixed.seed}${this._fixed.infohash}${id.infohash}`), {err: false, cb: null})
@@ -335,7 +300,10 @@ class Torrentz {
         return this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent)
       } else {
         const folderPath = path.join(this._storage, id.infohash)
-        const checkTorrent = await this.handleTheData({ id: id.infohash, num: useTimeout, kind: 'mid', res: false }, this.midTorrent(id.infohash, { path: folderPath, destroyStoreOnDestroy: false }), {err: true, cb: async () => { await this.stopTorrent(id.infohash, { destroyStore: false }) }})
+        const checkTorrent = await this.handleTheData({ id: id.infohash, num: useTimeout, kind: 'mid', res: false }, this.midTorrent(id.infohash, { path: folderPath, destroyStoreOnDestroy: false }), { err: true, cb: async () => { await this.stopTorrent(id.infohash, { destroyStore: false }) } })
+        if (!checkTorrent.files.length) {
+          await this.emptyTorrent(folderPath, id.infohash, checkTorrent)
+        }
         checkTorrent.infohash = checkTorrent.infoHash
         await this.handleTheData({num: 0}, this.db.put(`${this._fixed.load}${this._fixed.infohash}${checkTorrent.infohash}`, {size: checkTorrent.length, length: checkTorrent.files.length, infohash: checkTorrent.infohash, name: checkTorrent.name, dir: checkTorrent.dir}), {err: true, cb: async () => { await this.stopTorrent(checkTorrent.infohash, { destroyStore: false }) }})
         checkTorrent.folder = folderPath
@@ -347,7 +315,7 @@ class Torrentz {
       }
     } else if(id.address){
       const testTorrent = this.checkForTorrent(id.address, pathToData)
-      if(testTorrent){
+      if(testTorrent !== null){
         return testTorrent
       }
       const authorStuff = await this.handleTheData({num: 0}, this.db.get(`${this._fixed.seed}${this._fixed.address}${id.address}`), {err: false, cb: null})
@@ -381,7 +349,10 @@ class Torrentz {
           await fs.emptyDir(checkProperty.folder)
         }
 
-        const checkTorrent = await this.handleTheData({ id: checkProperty.address, num: useTimeout, kind: 'mid', res: false }, this.midTorrent(checkProperty.infohash, { path: dataPath, destroyStoreOnDestroy: false }), {err: true, cb: async () => { await this.stopTorrent(checkProperty.infohash, { destroyStore: false }) }})
+        const checkTorrent = await this.handleTheData({ id: checkProperty.address, num: useTimeout, kind: 'mid', res: false }, this.midTorrent(checkProperty.infohash, { path: dataPath, destroyStoreOnDestroy: false }), { err: true, cb: async () => { await this.stopTorrent(checkProperty.infohash, { destroyStore: false }) } })
+        if (!checkTorrent.files.length) {
+          await this.emptyTorrent(folderPath, id.address, checkTorrent)
+        }
         // don't overwrite the torrent's infohash even though they will both be the same
         for (const prop in checkProperty) {
           checkTorrent[prop] = checkProperty[prop]
