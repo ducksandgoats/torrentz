@@ -31,7 +31,7 @@ class Torrentz {
 
     // this.webtorrent = finalOpts.webtorrent ? finalOpts.webtorrent : new WebTorrent({ dht: { verify: ed.verify }, tracker: {wrtc} })
     this.db = new Level(this._base, { valueEncoding: 'json' })
-    this.webtorrent = new WebTorrent({ ...finalOpts, dht: { verify: ed.verify }, tracker: { wrtc: true } })
+    this.webtorrent = new WebTorrent({ ...finalOpts, dht: { verify: ed.verify }, tracker: true })
     
     this.webtorrent.on('error', error => {
       console.error(error)
