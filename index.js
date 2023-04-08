@@ -5,7 +5,6 @@ const sha1 = require('simple-sha1')
 const ed = require('ed25519-supercop')
 const bencode = require('bencode')
 const { pipelinePromise, Readable } = require('streamx')
-const wrtc = require('wrtc')
 const createTorrent = require('create-torrent')
 const parseTorrent = require('parse-torrent')
 const {uid} = require('uid')
@@ -31,11 +30,8 @@ class Torrentz {
     fs.ensureDirSync(this._base)
 
     // this.webtorrent = finalOpts.webtorrent ? finalOpts.webtorrent : new WebTorrent({ dht: { verify: ed.verify }, tracker: {wrtc} })
-    this.webtorrent = new WebTorrent({ ...finalOpts, dht: { verify: ed.verify }, tracker: { wrtc } })
     this.db = new Level(this._base, { valueEncoding: 'json' })
-
-    globalThis.WEBTORRENT_ANNOUNCE = createTorrent.announceList.map(arr => arr[0]).filter(url => url.indexOf('wss://') === 0 || url.indexOf('ws://') === 0)
-    globalThis.WRTC = wrtc
+    this.webtorrent = new WebTorrent({ ...finalOpts, dht: { verify: ed.verify }, tracker: { wrtc: true } })
     
     this.webtorrent.on('error', error => {
       console.error(error)
