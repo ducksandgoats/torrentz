@@ -232,12 +232,14 @@ class Torrentz {
         this.checkId.set(mainData.address || mainData.infohash, mainData)
       }
       if (path.extname(pathToData)) {
-        return mainData.files.find(file => { return pathToData === file.urlPath })
+        const checkFile = mainData.files.find(file => { return pathToData === file.urlPath })
+        return checkFile ? checkFile : null
       } else {
-        return mainData.files.filter(file => {return file.urlPath.startsWith(pathToData)})
+        const checkFolder = mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })
+        return checkFolder.length ? checkFolder : null
       }
     } else {
-      return null
+      return undefined
     }
   }
 
@@ -280,7 +282,7 @@ class Torrentz {
 
     if(id.infohash){
       const testTorrent = this.checkForTorrent(id.infohash, pathToData)
-      if(testTorrent !== null){
+      if(testTorrent !== undefined){
         return testTorrent
       }
       const authorStuff = await this.handleTheData({num: 0}, this.db.get(`${this._fixed.seed}${this._fixed.infohash}${id.infohash}`), {err: false, cb: null})
@@ -315,7 +317,7 @@ class Torrentz {
       }
     } else if(id.address){
       const testTorrent = this.checkForTorrent(id.address, pathToData)
-      if(testTorrent !== null){
+      if(testTorrent !== undefined){
         return testTorrent
       }
       const authorStuff = await this.handleTheData({num: 0}, this.db.get(`${this._fixed.seed}${this._fixed.address}${id.address}`), {err: false, cb: null})
