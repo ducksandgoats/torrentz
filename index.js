@@ -61,20 +61,12 @@ class Torrentz {
   // keep data active in the dht, runs every hour
   async keepUpdated () {
     this._readyToGo = false
-    for await(const parsedData of this.db.values({gt: `${this._fixed.seed}${this._fixed.address}`, lt: `${this._fixed.seed}${this._fixed.infohash}`})){
-      try {
-        await this.saveData(parsedData)
-      } catch (err) {
-        console.error(parsedData.address, err)
-      }
-      await new Promise((resolve, reject) => setTimeout(resolve, 3000))
-    }
     for (const torrent of this.webtorrent.torrents) {
-      if (torrent.address && !torrent.own) {
+      if (torrent.record) {
         try {
-          await this.saveData(torrent)
+          await this.saveData(torrent.record)
         } catch (err) {
-          console.error(torrent.address, err)
+          console.error(torrent.record.address, err)
         }
         await new Promise((resolve, reject) => setTimeout(resolve, 3000))
       }
@@ -340,7 +332,8 @@ class Torrentz {
         }
         checkTorrent.dir = null
         checkTorrent.own = true
-        checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
+        checkTorrent.files.forEach(file => { file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/') })
+        checkTorrent.record = checkProperty
         return this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent)
       } else {
         const folderPath = path.join(this._storage, id.address)
@@ -366,7 +359,8 @@ class Torrentz {
         await this.handleTheData({num: 0}, this.db.put(`${this._fixed.load}${this._fixed.address}${checkTorrent.address}`, {size: checkTorrent.length, length: checkTorrent.files.length, address: checkTorrent.address, infohash: checkTorrent.infohash, name: checkTorrent.name}), {err: true, cb: async () => {await this.stopTorrent(checkTorrent.address, { destroyStore: false })}})
         checkTorrent.own = false
         checkTorrent.dir = null
-        checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
+        checkTorrent.files.forEach(file => { file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/') })
+        checkTorrent.record = checkProperty
         return this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent)
       }
     } else {
@@ -458,6 +452,8 @@ class Torrentz {
       checkProperty.count = checkTorrent.files.length
 
       await this.db.put(`${this._fixed.seed}${this._fixed.address}${checkProperty.address}`, checkProperty)
+
+      checkTorrent.record = checkProperty
 
       return {secret: !id.provided ? id.secret : null, pair: !id.provided ? id.pair : null, path: pathToData, ...checkProperty, saved}
     } else {
