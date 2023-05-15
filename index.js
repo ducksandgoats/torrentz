@@ -391,10 +391,26 @@ class Torrentz {
       const extraFile = path.join(folderPath, 'neta.json')
       if (await fs.pathExists(extraFile)) {
         const extraData = JSON.parse((await fs.readFile(extraFile)).toString())
-        extraData.neta = extraData.neta + 1
+        extraData.idhash = await (async () => {
+          const testhashes = await this.getAllFiles('**/*', {cwd: folderPath, strict: false, nodir: true})
+          let idhashes = ''
+          for(const test of testhashes){
+            idhashes = idhashes + test
+          }
+          return idhashes
+        })()
+        extraData.update = extraData.update + 1
         await fs.writeFile(extraFile, JSON.stringify(extraData))
       } else {
-        await fs.writeFile(extraFile, JSON.stringify({neta: 0}))
+        const idhash = await (async () => {
+          const testhashes = await this.getAllFiles('**/*', {cwd: folderPath, strict: false, nodir: true})
+          let idhashes = ''
+          for(const test of testhashes){
+            idhashes = idhashes + test
+          }
+          return idhashes
+        })()
+        await fs.writeFile(extraFile, JSON.stringify({update: 0, idhash}))
       }
 
       const checkTorrent = await this.handleTheData({ id: 'torrent', num: useTimeout, kind: 'data', res: false }, this.dataFromTorrent(folderPath, authorStuff.desc), {err: true, cb: null})
@@ -439,10 +455,26 @@ class Torrentz {
       const extraFile = path.join(folderPath, 'neta.json')
       if (await fs.pathExists(extraFile)) {
         const extraData = JSON.parse((await fs.readFile(extraFile)).toString())
-        extraData.neta = extraData.neta + 1
+        extraData.idhash = await (async () => {
+          const testhashes = await this.getAllFiles('**/*', {cwd: folderPath, strict: false, nodir: true})
+          let idhashes = ''
+          for(const test of testhashes){
+            idhashes = idhashes + test
+          }
+          return idhashes
+        })()
+        extraData.update = extraData.update + 1
         await fs.writeFile(extraFile, JSON.stringify(extraData))
       } else {
-        await fs.writeFile(extraFile, JSON.stringify({neta: 0}))
+        const idhash = await (async () => {
+          const testhashes = await this.getAllFiles('**/*', {cwd: folderPath, strict: false, nodir: true})
+          let idhashes = ''
+          for(const test of testhashes){
+            idhashes = idhashes + test
+          }
+          return idhashes
+        })()
+        await fs.writeFile(extraFile, JSON.stringify({update: 0, idhash}))
       }
 
       const checkTorrent = await this.handleTheData({ id: 'torrent', num: useTimeout, kind: 'data', res: false }, this.dataFromTorrent(folderPath, authorStuff.desc), {err: true, cb: null})
