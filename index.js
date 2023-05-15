@@ -1,7 +1,6 @@
 const WebTorrent = require('webtorrent')
 const fs = require('fs-extra')
 const path = require('path')
-const sha1 = require('simple-sha1')
 const ed = require('ed25519-supercop')
 const bencode = require('bencode')
 const { pipelinePromise, Readable } = require('streamx')
@@ -11,6 +10,7 @@ const wrtc = require('wrtc')
 const {uid} = require('uid')
 const glob = require("glob")
 const { Level } = require('level')
+const crypto = require('crypto')
 
 // saves us from saving secret keys(saving secret keys even encrypted secret keys is something i want to avoid)
 // with this function which was taken from the bittorrent-dht package
@@ -151,16 +151,14 @@ class Torrentz {
     }
     const addressKey = Buffer.from(address, 'hex')
     const getData = await new Promise((resolve, reject) => {
-      sha1(addressKey, (targetID) => {
-        this.webtorrent.dht.get(targetID, (err, res) => {
-          if (err) {
-            reject(err)
-          } else if (res) {
-            resolve(res)
-          } else if (!res) {
-            reject(new Error('Could not resolve address'))
-          }
-        })
+      this.webtorrent.dht.get(crypto.createHash('sha1').update(addressKey).digest("hex"), (err, res) => {
+        if (err) {
+          reject(err)
+        } else if (res) {
+          resolve(res)
+        } else if (!res) {
+          reject(new Error('Could not resolve address'))
+        }
       })
     })
 
@@ -391,7 +389,7 @@ class Torrentz {
       const extraFile = path.join(folderPath, 'neta.json')
       if (await fs.pathExists(extraFile)) {
         const extraData = JSON.parse((await fs.readFile(extraFile)).toString())
-        extraData.idhash = await (async () => {
+        const testhash = await (async () => {
           const testhashes = await this.getAllFiles('**/*', {cwd: folderPath, strict: false, nodir: true})
           let idhashes = ''
           for(const test of testhashes){
@@ -399,10 +397,11 @@ class Torrentz {
           }
           return idhashes
         })()
+        extraData.idhash = crypto.createHash('md5').update(testhash).digest("hex")
         extraData.update = extraData.update + 1
         await fs.writeFile(extraFile, JSON.stringify(extraData))
       } else {
-        const idhash = await (async () => {
+        const testhash = await (async () => {
           const testhashes = await this.getAllFiles('**/*', {cwd: folderPath, strict: false, nodir: true})
           let idhashes = ''
           for(const test of testhashes){
@@ -410,6 +409,7 @@ class Torrentz {
           }
           return idhashes
         })()
+        const idhash = crypto.createHash('md5').update(testhash).digest("hex")
         await fs.writeFile(extraFile, JSON.stringify({update: 0, idhash}))
       }
 
@@ -455,7 +455,7 @@ class Torrentz {
       const extraFile = path.join(folderPath, 'neta.json')
       if (await fs.pathExists(extraFile)) {
         const extraData = JSON.parse((await fs.readFile(extraFile)).toString())
-        extraData.idhash = await (async () => {
+        const testhash = await (async () => {
           const testhashes = await this.getAllFiles('**/*', {cwd: folderPath, strict: false, nodir: true})
           let idhashes = ''
           for(const test of testhashes){
@@ -463,10 +463,11 @@ class Torrentz {
           }
           return idhashes
         })()
+        extraData.idhash = crypto.createHash('md5').update(testhash).digest("hex")
         extraData.update = extraData.update + 1
         await fs.writeFile(extraFile, JSON.stringify(extraData))
       } else {
-        const idhash = await (async () => {
+        const testhash = await (async () => {
           const testhashes = await this.getAllFiles('**/*', {cwd: folderPath, strict: false, nodir: true})
           let idhashes = ''
           for(const test of testhashes){
@@ -474,6 +475,7 @@ class Torrentz {
           }
           return idhashes
         })()
+        const idhash = crypto.createHash('md5').update(testhash).digest("hex")
         await fs.writeFile(extraFile, JSON.stringify({update: 0, idhash}))
       }
 
