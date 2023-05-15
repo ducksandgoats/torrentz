@@ -7,6 +7,7 @@ const bencode = require('bencode')
 const { pipelinePromise, Readable } = require('streamx')
 const createTorrent = require('create-torrent')
 const parseTorrent = require('parse-torrent')
+const wrtc = require('wrtc')
 const {uid} = require('uid')
 const glob = require("glob")
 const { Level } = require('level')
@@ -32,6 +33,9 @@ class Torrentz {
     // this.webtorrent = finalOpts.webtorrent ? finalOpts.webtorrent : new WebTorrent({ dht: { verify: ed.verify }, tracker: {wrtc} })
     this.db = new Level(this._base, { valueEncoding: 'json' })
     this.webtorrent = new WebTorrent({ ...finalOpts, dht: { verify: ed.verify }, tracker: true })
+
+    globalThis.WEBTORRENT_ANNOUNCE = createTorrent.announceList.map(arr => arr[0]).filter(url => url.indexOf('wss://') === 0 || url.indexOf('ws://') === 0)
+    globalThis.WRTC = wrtc
     
     this.webtorrent.on('error', error => {
       console.error(error)
