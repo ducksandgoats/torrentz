@@ -228,11 +228,9 @@ class Torrentz {
         this.checkId.set(mainData.address || mainData.infohash, mainData)
       }
       if (path.extname(pathToData)) {
-        const checkFile = mainData.files.find(file => { return pathToData === file.urlPath })
-        return checkFile ? checkFile : null
+        return {done: mainData.done, progress: mainData.progress, remain: `${mainData.downloaded} out of ${mainData.length}`, data: mainData.files.find(file => { return pathToData === file.urlPath })}
       } else {
-        const checkFolder = mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })
-        return checkFolder.length ? checkFolder : null
+        return {done: mainData.done, progress: mainData.progress, remain: `${mainData.downloaded} out of ${mainData.length}`, data: mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })}
       }
     } else {
       return undefined
@@ -242,9 +240,9 @@ class Torrentz {
   sendTheTorrent(id, pathToData, torrent) {
     this.checkId.set(id, torrent)
     if (path.extname(pathToData)) {
-      return torrent.files.find(file => { return pathToData === file.urlPath })
+      return {done: torrent.done, progress: torrent.progress, remain: `${torrent.downloaded} out of ${torrent.length}`, data: torrent.files.find(file => { return pathToData === file.urlPath })}
     } else {
-      return torrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
+      return {done: torrent.done, progress: torrent.progress, remain: `${torrent.downloaded} out of ${torrent.length}`, data: torrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})}
     }
   }
 
