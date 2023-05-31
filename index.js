@@ -292,7 +292,7 @@ class Torrentz {
       const authorStuff = await this.handleTheData({num: 0}, this.db.get(`${this._fixed.seed}${this._fixed.infohash}${id.infohash}`), {err: false, cb: null})
       if (authorStuff) {
         const folderPath = path.join(this._storage, authorStuff.dir)
-        const checkTorrent = await this.handleTheData({ id: authorStuff.infohash, num: useTimeout, kind: 'start', res: false }, this.startTorrent(folderPath, { ...authorStuff.desc, destroyStoreOnDestroy: false }), {err: true, cb: null})
+        const checkTorrent = testTorrent || await this.handleTheData({ id: authorStuff.infohash, num: useTimeout, kind: 'start', res: false }, this.startTorrent(folderPath, { ...authorStuff.desc, destroyStoreOnDestroy: false }), {err: true, cb: null})
         if(checkTorrent.infoHash !== authorStuff.infohash){
           this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false }) 
           throw new Error('infohash does not match with the given infohash')
@@ -307,7 +307,7 @@ class Torrentz {
         return this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent)
       } else {
         const folderPath = path.join(this._storage, id.infohash)
-        const checkTorrent = await this.handleTheData({ id: id.infohash, num: useTimeout, kind: 'mid', res: false }, this.midTorrent(id.infohash, { path: folderPath, destroyStoreOnDestroy: false }), { err: true, cb: null})
+        const checkTorrent = testTorrent || await this.handleTheData({ id: id.infohash, num: useTimeout, kind: 'mid', res: false }, this.midTorrent(id.infohash, { path: folderPath, destroyStoreOnDestroy: false }), { err: true, cb: null})
         checkTorrent.infohash = checkTorrent.infoHash
         await this.handleTheData({num: 0}, this.db.put(`${this._fixed.load}${this._fixed.infohash}${checkTorrent.infohash}`, {size: checkTorrent.length, length: checkTorrent.files.length, infohash: checkTorrent.infohash, name: checkTorrent.name, dir: checkTorrent.dir}), {err: true, cb: async () => { await this.stopTorrent(checkTorrent.infohash, { destroyStore: false }) }})
         checkTorrent.folder = folderPath
@@ -326,7 +326,7 @@ class Torrentz {
       const authorStuff = await this.handleTheData({num: 0}, this.db.get(`${this._fixed.seed}${this._fixed.address}${id.address}`), {err: false, cb: null})
       if(authorStuff){
         const folderPath = path.join(this._storage, authorStuff.dir)
-        const checkTorrent = await this.handleTheData({ id: authorStuff.address, num: useTimeout, kind: 'start', res: false }, this.startTorrent(folderPath, { ...authorStuff.desc, destroyStoreOnDestroy: true }), {err: true, cb: null})
+        const checkTorrent = testTorrent || await this.handleTheData({ id: authorStuff.address, num: useTimeout, kind: 'start', res: false }, this.startTorrent(folderPath, { ...authorStuff.desc, destroyStoreOnDestroy: true }), {err: true, cb: null})
         if(checkTorrent.infoHash !== authorStuff.infohash){
           this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false })
           throw new Error('infohash does not match with the given infohash')
@@ -356,7 +356,7 @@ class Torrentz {
           await fs.emptyDir(checkProperty.folder)
         }
 
-        const checkTorrent = await this.handleTheData({ id: checkProperty.address, num: useTimeout, kind: 'mid', res: false }, this.midTorrent(checkProperty.infohash, { path: dataPath, destroyStoreOnDestroy: false }), { err: true, cb: null })
+        const checkTorrent = testTorrent || await this.handleTheData({ id: checkProperty.address, num: useTimeout, kind: 'mid', res: false }, this.midTorrent(checkProperty.infohash, { path: dataPath, destroyStoreOnDestroy: false }), { err: true, cb: null })
         // don't overwrite the torrent's infohash even though they will both be the same
         for (const prop in checkProperty) {
           checkTorrent[prop] = checkProperty[prop]
