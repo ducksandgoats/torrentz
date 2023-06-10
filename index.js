@@ -83,6 +83,9 @@ class Torrentz {
       return await res
     } catch (error) {
       if (rej) {
+        if(rej !== true){
+          await rej()
+        }
         // if (useCaught.cb) {
         //   await useCaught.cb()
         // }
@@ -554,7 +557,7 @@ class Torrentz {
 
           authorStuff.desc = opts.desc || authorStuff.desc
   
-          const dataFromFolder = await this.resOrRej(this.dataFromTorrent(folderPath, authorStuff.desc), true)
+          const dataFromFolder = await this.resOrRej(this.dataFromTorrent(folderPath, authorStuff.desc), async () => {await fs.remove(folderPath);await this.db.del(`${this._fixed.seed}${this._fixed.infohash}${authorStuff.infohash}`);})
 
           if (authorStuff.infohash !== dataFromFolder.infoHash) {
             await this.db.del(`${this._fixed.seed}${this._fixed.infohash}${authorStuff.infohash}`)
@@ -636,7 +639,7 @@ class Torrentz {
           
           authorStuff.desc = opts.desc || authorStuff.desc || {}
   
-          const dataFromFolder = await this.resOrRej(this.dataFromTorrent(folderPath, authorStuff.desc), true)
+          const dataFromFolder = await this.resOrRej(this.dataFromTorrent(folderPath, authorStuff.desc), async () => {await fs.remove(folderPath);await this.db.del(`${this._fixed.seed}${this._fixed.address}${authorStuff.address}`);})
 
           const dataFromProp = await this.resOrRej(this.publishFunc(authorStuff.address, info.secret, {...authorStuff.stuff, ih: dataFromFolder.infoHash}, authorStuff.sequence + 1), true)
           dataFromProp.dir = authorStuff.dir
