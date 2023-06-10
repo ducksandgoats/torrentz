@@ -786,16 +786,18 @@ class Torrentz {
 
   async handleFormData(folderPath, data, fullPath, sec) {
     await fs.ensureDir(folderPath)
+    const arr = []
     for (const info of data) {
-      const tempPath = path.join(folderPath, info.webkitRelativePath || info.name)
+      const useName = info.webkitRelativePath || info.name
+      const tempPath = path.join(folderPath, useName)
       await this.handleTheData({ id: tempPath, num: sec, res: false, kind: 'formdata' }, pipelinePromise(Readable.from(info.stream()), fs.createWriteStream(tempPath)), {err: true, cb: null})
+      arr.push(path.join(fullPath, useName).replace(/\\/g, "/"))
     }
-    return fullPath
+    return arr
   }
 
   async handleRegData(mainPath, body, fullPath, sec) {
-    const checkDir = path.dirname(mainPath)
-    await fs.ensureDir(checkDir)
+    await fs.ensureDir(path.dirname(mainPath))
     await this.handleTheData({ id: mainPath, num: sec, res: false, kind: 'regdata' }, pipelinePromise(Readable.from(body), fs.createWriteStream(mainPath)), {err: true, cb: null})
     return fullPath
   }
