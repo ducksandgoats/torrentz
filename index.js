@@ -31,6 +31,7 @@ class Torrentz {
 
     // this.webtorrent = finalOpts.webtorrent ? finalOpts.webtorrent : new WebTorrent({ dht: { verify: ed.verify }, tracker: {wrtc} })
     this.db = new Level(this._base, { valueEncoding: 'json' })
+    // this.webtorrent = finalOpts.torrentz || new WebTorrent({ ...finalOpts, dht: { verify: ed.verify } })
     this.webtorrent = new WebTorrent({ ...finalOpts, dht: { verify: ed.verify } })
 
     globalThis.WEBTORRENT_ANNOUNCE = createTorrent.announceList.map(arr => arr[0]).filter(url => url.indexOf('wss://') === 0 || url.indexOf('ws://') === 0)
@@ -319,7 +320,12 @@ class Torrentz {
         checkTorrent.dir = authorStuff.dir
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
         checkTorrent.complete = true
-        return this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent)
+        if(opts.torrent){
+          this.checkId.set(checkTorrent.infohash, checkTorrent)
+          return checkTorrent
+        } else {
+          return this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent)
+        }
       } else {
         const folderPath = path.join(this._storage, id.infohash)
         const checkTorrent = testTorrent || await this.resOrRej(this.midTorrent(id.infohash, { path: folderPath, destroyStoreOnDestroy: false }), true)
@@ -331,7 +337,12 @@ class Torrentz {
         checkTorrent.dir = null
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
         checkTorrent.complete = true
-        return this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent)
+        if(opts.torrent){
+          this.checkId.set(checkTorrent.infohash, checkTorrent)
+          return checkTorrent
+        } else {
+          return this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent)
+        }
       }
     } else if(id.address){
       const testTorrent = this.checkForTorrent(id.address, pathToData)
@@ -358,7 +369,12 @@ class Torrentz {
         checkTorrent.files.forEach(file => { file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/') })
         checkTorrent.record = checkProperty
         checkTorrent.complete = true
-        return this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent)
+        if(opts.torrent){
+          this.checkId.set(checkTorrent.address, checkTorrent)
+          return checkTorrent
+        } else {
+          return this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent)
+        }
       } else {
         const folderPath = path.join(this._storage, id.address)
 
@@ -382,7 +398,12 @@ class Torrentz {
         checkTorrent.files.forEach(file => { file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/') })
         checkTorrent.record = checkProperty
         checkTorrent.complete = true
-        return this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent)
+        if(opts.torrent){
+          this.checkId.set(checkTorrent.address, checkTorrent)
+          return checkTorrent
+        } else {
+          return this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent)
+        }
       }
     } else {
       throw new Error('invalid identifier was used')
@@ -511,7 +532,7 @@ class Torrentz {
 
       checkTorrent.record = checkProperty
 
-      return {secret: !id.provided ? id.secret : null, pair: !id.provided ? id.pair : null, path: pathToData, ...checkProperty, saved}
+      return {secret: id.secret || null, pair: id.pair || null, address: id.address || null, path: pathToData, ...checkProperty, saved}
     } else {
       throw new Error('data is invalid')
     }
