@@ -18,7 +18,7 @@ const crypto = require('crypto')
 
 class Torrentz {
   constructor (opts = {}) {
-    const defOpts = { dir: __dirname, storage: 'storage', base: 'base', routine: 3600000 }
+    const defOpts = { dir: __dirname, storage: 'storage', base: 'base', routine: 3600000, dht: { verify: ed.verify } }
     const finalOpts = { ...defOpts, ...opts }
     this._routine = finalOpts.routine
     this.checkHash = /^[a-fA-F0-9]{40}$/
@@ -30,9 +30,9 @@ class Torrentz {
     fs.ensureDirSync(this._base)
 
     // this.webtorrent = finalOpts.webtorrent ? finalOpts.webtorrent : new WebTorrent({ dht: { verify: ed.verify }, tracker: {wrtc} })
-    this.db = new Level(this._base, { valueEncoding: 'json' })
-    // this.webtorrent = finalOpts.torrentz || new WebTorrent({ ...finalOpts, dht: { verify: ed.verify } })
-    this.webtorrent = new WebTorrent({ ...finalOpts, dht: { verify: ed.verify } })
+    this.db = finalOpts.leveldb || new Level(this._base, { valueEncoding: 'json' })
+    this.webtorrent = finalOpts.webtorrent || new WebTorrent({ ...finalOpts })
+    // this.webtorrent = new WebTorrent({ ...finalOpts, dht: { verify: ed.verify } })
 
     globalThis.WEBTORRENT_ANNOUNCE = createTorrent.announceList.map(arr => arr[0]).filter(url => url.indexOf('wss://') === 0 || url.indexOf('ws://') === 0)
     globalThis.WRTC = wrtc
@@ -532,7 +532,7 @@ class Torrentz {
 
       checkTorrent.record = checkProperty
 
-      return {secret: id.secret || null, pair: id.pair || null, address: id.address || null, path: pathToData, ...checkProperty, saved}
+      return {secret: id.secret || null, seed: id.seed || null, address: id.address || null, path: pathToData, ...checkProperty, saved}
     } else {
       throw new Error('data is invalid')
     }
@@ -851,16 +851,16 @@ class Torrentz {
   }
 
   // create a keypair
-  createKeypair () {
-    const pair = ed.createSeed()
-    const { publicKey, secretKey } = ed.createKeyPair(pair)
-    return { address: publicKey.toString('hex'), secret: secretKey.toString('hex'), pair: pair.toString('hex') }
+  createKeypair (data) {
+    const seed = data ? Buffer.from(data) : ed.createSeed()
+    const { publicKey, secretKey } = ed.createKeyPair(seed)
+    return { address: publicKey.toString('hex'), secret: secretKey.toString('hex'), seed: seed.toString('hex') }
   }
 
-  generateKeypair (data) {
-    const { publicKey, secretKey } = ed.createKeyPair(data)
-    return { address: publicKey.toString('hex'), secret: secretKey.toString('hex'), pair: data.toString('hex') }
-  }
+  // generateKeypair (data) {
+  //   const { publicKey, secretKey } = ed.createKeyPair(data)
+  //   return { address: publicKey.toString('hex'), secret: secretKey.toString('hex'), seed: data.toString('hex') }
+  // }
 
   // obj to buff for stuff
   stuffToBuff(data){
