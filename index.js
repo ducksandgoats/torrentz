@@ -222,29 +222,39 @@ class Torrentz {
     return { magnet: `magnet:?xs=${this._fixed.BTPK_PREFIX}${address}`, address, infohash: ih, sequence: seq, stuff, sig: buffSig.toString('hex'), ...putData }
   }
 
-  checkForTorrent(id, pathToData) {
+  checkForTorrent(id, pathToData, data) {
     const hasIt = this.checkId.has(id)
     const mainData = hasIt ? this.checkId.get(id) : this.findTheTorrent(id)
     if (mainData) {
       if (!hasIt) {
         this.checkId.set(mainData.address || mainData.infohash, mainData)
       }
-      if (path.extname(pathToData)) {
-        return {complete: mainData.complete, done: mainData.done, progress: mainData.progress, remain: `${mainData.downloaded} out of ${mainData.length}`, data: mainData.files.find(file => { return pathToData === file.urlPath })}
+      if(data){
+        return mainData
       } else {
-        return {complete: mainData.complete, done: mainData.done, progress: mainData.progress, remain: `${mainData.downloaded} out of ${mainData.length}`, data: mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })}
+        if (path.extname(pathToData)) {
+          return {complete: mainData.complete, done: mainData.done, progress: mainData.progress, remain: `${mainData.downloaded} out of ${mainData.length}`, data: mainData.files.find(file => { return pathToData === file.urlPath })}
+        } else {
+          return {complete: mainData.complete, done: mainData.done, progress: mainData.progress, remain: `${mainData.downloaded} out of ${mainData.length}`, data: mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })}
+        }
       }
     } else {
       return null
     }
   }
 
-  sendTheTorrent(id, pathToData, torrent) {
-    this.checkId.set(id, torrent)
-    if (path.extname(pathToData)) {
-      return {complete: torrent.complete, done: torrent.done, progress: torrent.progress, remain: `${torrent.downloaded} out of ${torrent.length}`, data: torrent.files.find(file => { return pathToData === file.urlPath })}
+  sendTheTorrent(id, pathToData, torrent, data) {
+    if(!this.checkId.has(id)){
+      this.checkId.set(id, torrent)
+    }
+    if(data){
+      return torrent
     } else {
-      return {complete: torrent.complete, done: torrent.done, progress: torrent.progress, remain: `${torrent.downloaded} out of ${torrent.length}`, data: torrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})}
+      if (path.extname(pathToData)) {
+        return {complete: torrent.complete, done: torrent.done, progress: torrent.progress, remain: `${torrent.downloaded} out of ${torrent.length}`, data: torrent.files.find(file => { return pathToData === file.urlPath })}
+      } else {
+        return {complete: torrent.complete, done: torrent.done, progress: torrent.progress, remain: `${torrent.downloaded} out of ${torrent.length}`, data: torrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})}
+      }
     }
   }
 
@@ -301,7 +311,7 @@ class Torrentz {
     }
 
     if(id.infohash){
-      const testTorrent = this.checkForTorrent(id.infohash, pathToData)
+      const testTorrent = this.checkForTorrent(id.infohash, pathToData, opts.torrent)
       if(testTorrent?.complete){
         return testTorrent
       }
@@ -320,12 +330,7 @@ class Torrentz {
         checkTorrent.dir = authorStuff.dir
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
         checkTorrent.complete = true
-        if(opts.torrent){
-          this.checkId.set(checkTorrent.infohash, checkTorrent)
-          return checkTorrent
-        } else {
-          return this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent)
-        }
+        return this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent, opts.torrent)
       } else {
         const folderPath = path.join(this._storage, id.infohash)
         const checkTorrent = testTorrent || await this.resOrRej(this.midTorrent(id.infohash, { path: folderPath, destroyStoreOnDestroy: false }), true)
@@ -337,15 +342,10 @@ class Torrentz {
         checkTorrent.dir = null
         checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
         checkTorrent.complete = true
-        if(opts.torrent){
-          this.checkId.set(checkTorrent.infohash, checkTorrent)
-          return checkTorrent
-        } else {
-          return this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent)
-        }
+        return this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent, opts.torrent)
       }
     } else if(id.address){
-      const testTorrent = this.checkForTorrent(id.address, pathToData)
+      const testTorrent = this.checkForTorrent(id.address, pathToData, opts.torrent)
       if(testTorrent?.complete){
         return testTorrent
       }
@@ -369,12 +369,7 @@ class Torrentz {
         checkTorrent.files.forEach(file => { file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/') })
         checkTorrent.record = checkProperty
         checkTorrent.complete = true
-        if(opts.torrent){
-          this.checkId.set(checkTorrent.address, checkTorrent)
-          return checkTorrent
-        } else {
-          return this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent)
-        }
+        return this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent, opts.torrent)
       } else {
         const folderPath = path.join(this._storage, id.address)
 
@@ -398,12 +393,7 @@ class Torrentz {
         checkTorrent.files.forEach(file => { file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/') })
         checkTorrent.record = checkProperty
         checkTorrent.complete = true
-        if(opts.torrent){
-          this.checkId.set(checkTorrent.address, checkTorrent)
-          return checkTorrent
-        } else {
-          return this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent)
-        }
+        return this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent, opts.torrent)
       }
     } else {
       throw new Error('invalid identifier was used')
