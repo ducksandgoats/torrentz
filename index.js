@@ -843,7 +843,7 @@ module.exports = async function(){
   
     // create a keypair
     createKeypair (data) {
-      const seed = data ? Buffer.from(data) : ed.createSeed()
+      const seed = data ? Buffer.from(data, 'hex') : ed.createSeed()
       const { publicKey, secretKey } = ed.createKeyPair(seed)
       return { address: publicKey.toString('hex'), secret: secretKey.toString('hex'), seed: seed.toString('hex') }
     }
