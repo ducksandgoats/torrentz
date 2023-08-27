@@ -153,7 +153,7 @@ module.exports = async function(){
         throw new Error('address can not be parsed')
       }
       const getData = await new Promise((resolve, reject) => {
-        this.webtorrent.dht.get(Buffer.from(address, 'hex'), (err, res) => {
+        this.webtorrent.dht.get(crypto.createHash('sha1').update(Buffer.from(address, 'hex')).digest('hex'), (err, res) => {
           if (err) {
             reject(err)
           } else if (res) {
