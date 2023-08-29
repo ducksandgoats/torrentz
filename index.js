@@ -3,7 +3,7 @@ module.exports = async function(){
   const fs = require('fs-extra')
   const path = require('path')
   const ed = require('ed25519-supercop')
-  const bencode = require('bencode')
+  const {default: bencode} = await import('bencode')
   const { pipelinePromise, Readable } = require('streamx')
   const createTorrent = require('create-torrent')
   const parseTorrent = require('parse-torrent')
@@ -127,7 +127,7 @@ module.exports = async function(){
       const hashBuff = Buffer.from(infoHash, 'hex')
       const signatureBuff = Buffer.from(data.sig, 'hex')
       const stuffBuff = this.stuffToBuff(data.stuff)
-      const encodedSignatureData = this.encodeSigData({ seq: data.sequence, v: { ih: hashBuff, ...stuffBuff } })
+      const encodedSignatureData = Buffer.from(this.encodeSigData({ seq: data.sequence, v: { ih: hashBuff, ...stuffBuff } }))
       const addressBuff = Buffer.from(data.address, 'hex')
   
       if (!ed.verify(signatureBuff, encodedSignatureData, addressBuff)) {
@@ -207,7 +207,7 @@ module.exports = async function(){
   
       let seq = count
   
-      const buffSig = ed.sign(this.encodeSigData({ seq, v }), buffAddKey, buffSecKey)
+      const buffSig = ed.sign(Buffer.from(this.encodeSigData({ seq, v })), buffAddKey, buffSecKey)
   
       const putData = await new Promise((resolve, reject) => {
         this.webtorrent.dht.put({ k: buffAddKey, v, seq, sig: buffSig }, (putErr, hash, number) => {
