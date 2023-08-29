@@ -19,7 +19,7 @@ module.exports = async function(){
   
   return class Torrentz {
     constructor (opts = {}) {
-      const defOpts = { dir: __dirname, storage: 'storage', base: 'base', routine: 3600000, dht: { verify: ed.verify } }
+      const defOpts = { dir: __dirname, storage: 'storage', base: 'base', routine: 3600000, dht: { verify: (sig, message, key) => {return ed.verify(sig, ArrayBuffer.isView(message) ? Buffer.from(message.buffer, message.byteOffset, message.byteLength) : message, key)} } }
       const finalOpts = { ...defOpts, ...opts }
       this._routine = finalOpts.routine
       this.checkHash = /^[a-fA-F0-9]{40}$/
@@ -59,8 +59,11 @@ module.exports = async function(){
   
     encodeSigData (msg) {
       const ref = { seq: msg.seq, v: msg.v }
-      if (msg.salt) ref.salt = msg.salt
-      return Buffer.from(bencode.encode(ref).slice(1, -1))
+      if(msg.salt){
+        ref.salt = msg.salt
+      }
+      const benc = bencode.encode(ref).slice(1, -1)
+      return Buffer.from(benc.buffer, benc.byteOffset, benc.byteLength)
     }
   
     // keep data active in the dht, runs every hour
