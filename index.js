@@ -60,7 +60,7 @@ module.exports = async function(){
     encodeSigData (msg) {
       const ref = { seq: msg.seq, v: msg.v }
       if (msg.salt) ref.salt = msg.salt
-      return bencode.encode(ref).slice(1, -1)
+      return Buffer.from(bencode.encode(ref).slice(1, -1))
     }
   
     // keep data active in the dht, runs every hour
@@ -127,7 +127,7 @@ module.exports = async function(){
       const hashBuff = Buffer.from(infoHash, 'hex')
       const signatureBuff = Buffer.from(data.sig, 'hex')
       const stuffBuff = this.stuffToBuff(data.stuff)
-      const encodedSignatureData = Buffer.from(this.encodeSigData({ seq: data.sequence, v: { ih: hashBuff, ...stuffBuff } }))
+      const encodedSignatureData = this.encodeSigData({ seq: data.sequence, v: { ih: hashBuff, ...stuffBuff } })
       const addressBuff = Buffer.from(data.address, 'hex')
   
       if (!ed.verify(signatureBuff, encodedSignatureData, addressBuff)) {
@@ -207,7 +207,7 @@ module.exports = async function(){
   
       let seq = count
   
-      const buffSig = ed.sign(Buffer.from(this.encodeSigData({ seq, v })), buffAddKey, buffSecKey)
+      const buffSig = ed.sign(this.encodeSigData({ seq, v }), buffAddKey, buffSecKey)
   
       const putData = await new Promise((resolve, reject) => {
         this.webtorrent.dht.put({ k: buffAddKey, v, seq, sig: buffSig }, (putErr, hash, number) => {
