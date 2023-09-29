@@ -254,9 +254,9 @@ module.exports = async function(){
         return torrent
       } else {
         if (path.extname(pathToData)) {
-          return {complete: torrent.complete, folder: torrent.folder, done: torrent.done, progress: torrent.progress, remain: `${torrent.downloaded} out of ${torrent.length}`, data: torrent.files.find(file => { return pathToData === file.urlPath })}
+          return {infoHash: torrent.infoHash, complete: torrent.complete, folder: torrent.folder, done: torrent.done, progress: torrent.progress, remain: `${torrent.downloaded} out of ${torrent.length}`, data: torrent.files.find(file => { return pathToData === file.urlPath })}
         } else {
-          return {complete: torrent.complete, folder: torrent.folder, done: torrent.done, progress: torrent.progress, remain: `${torrent.downloaded} out of ${torrent.length}`, data: torrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})}
+          return {infoHash: torrent.infoHash, complete: torrent.complete, folder: torrent.folder, done: torrent.done, progress: torrent.progress, remain: `${torrent.downloaded} out of ${torrent.length}`, data: torrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})}
         }
       }
     }
