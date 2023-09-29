@@ -236,9 +236,9 @@ module.exports = async function(){
           return mainData
         } else {
           if (path.extname(pathToData)) {
-            return {complete: mainData.complete, folder: mainData.folder, done: mainData.done, progress: mainData.progress, remain: `${mainData.downloaded} out of ${mainData.length}`, data: mainData.files.find(file => { return pathToData === file.urlPath })}
+            return {infoHash: mainData.infoHash, complete: mainData.complete, folder: mainData.folder, done: mainData.done, progress: mainData.progress, remain: `${mainData.downloaded} out of ${mainData.length}`, data: mainData.files.find(file => { return pathToData === file.urlPath })}
           } else {
-            return {complete: mainData.complete, folder: mainData.folder, done: mainData.done, progress: mainData.progress, remain: `${mainData.downloaded} out of ${mainData.length}`, data: mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })}
+            return {infoHash: mainData.infoHash, complete: mainData.complete, folder: mainData.folder, done: mainData.done, progress: mainData.progress, remain: `${mainData.downloaded} out of ${mainData.length}`, data: mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })}
           }
         }
       } else {
