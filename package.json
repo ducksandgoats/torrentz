@@ -1,6 +1,6 @@
 {
   "name": "torrentz",
-  "version": "14.0.8",
+  "version": "14.0.9",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -20,7 +20,7 @@
     "parse-torrent": "^9.1.5",
     "streamx": "^2.13.2",
     "uid": "^2.0.0",
-    "webtorrent": "^2.1.0",
+    "webtorrent": "^2.1.37",
     "wrtc": "^0.4.7"
   }
 }
