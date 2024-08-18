@@ -12,6 +12,7 @@ module.exports = async function(){
   const glob = require("glob")
   const { Level } = require('level')
   const crypto = require('crypto')
+  const ut_message = await import('ut_message')
   
   // saves us from saving secret keys(saving secret keys even encrypted secret keys is something i want to avoid)
   // with this function which was taken from the bittorrent-dht package
@@ -225,39 +226,31 @@ module.exports = async function(){
       return { magnet: `magnet:?xs=${this._fixed.BTPK_PREFIX}${address}`, address, infohash: ih, sequence: seq, stuff, sig: buffSig.toString('hex'), ...putData }
     }
   
-    checkForTorrent(id, pathToData, data) {
+    checkForTorrent(id, pathToData) {
       const hasIt = this.checkId.has(id)
       const mainData = hasIt ? this.checkId.get(id) : this.findTheTorrent(id)
       if (mainData) {
         if (!hasIt) {
           this.checkId.set(mainData.address || mainData.infohash, mainData)
         }
-        if(data){
-          return mainData
+        if (path.extname(pathToData)) {
+          return {done: mainData.done, torrent: mainData, data: mainData.files.find(file => { return pathToData === file.urlPath })}
         } else {
-          if (path.extname(pathToData)) {
-            return {infoHash: mainData.infoHash, complete: mainData.complete, folder: mainData.folder, done: mainData.done, progress: mainData.progress, remain: `${mainData.downloaded} out of ${mainData.length}`, data: mainData.files.find(file => { return pathToData === file.urlPath })}
-          } else {
-            return {infoHash: mainData.infoHash, complete: mainData.complete, folder: mainData.folder, done: mainData.done, progress: mainData.progress, remain: `${mainData.downloaded} out of ${mainData.length}`, data: mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })}
-          }
+          return {done: mainData.done, torrent: mainData, data: mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })}
         }
       } else {
         return null
       }
     }
   
-    sendTheTorrent(id, pathToData, torrent, data) {
+    sendTheTorrent(id, pathToData, torrent) {
       if(!this.checkId.has(id)){
         this.checkId.set(id, torrent)
       }
-      if(data){
-        return torrent
+      if (path.extname(pathToData)) {
+        return {done: torrent.done, torrent, data: torrent.files.find(file => { return pathToData === file.urlPath })}
       } else {
-        if (path.extname(pathToData)) {
-          return {infoHash: torrent.infoHash, complete: torrent.complete, folder: torrent.folder, done: torrent.done, progress: torrent.progress, remain: `${torrent.downloaded} out of ${torrent.length}`, data: torrent.files.find(file => { return pathToData === file.urlPath })}
-        } else {
-          return {infoHash: torrent.infoHash, complete: torrent.complete, folder: torrent.folder, done: torrent.done, progress: torrent.progress, remain: `${torrent.downloaded} out of ${torrent.length}`, data: torrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})}
-        }
+        return {done: torrent.done, torrent, data: torrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})}
       }
     }
   
@@ -314,65 +307,138 @@ module.exports = async function(){
       }
   
       if(id.infohash){
-        const testTorrent = this.checkForTorrent(id.infohash, pathToData, opts.torrent)
-        if(testTorrent?.complete){
-          return testTorrent
+        const testTorrent = this.checkForTorrent(id.infohash, pathToData)
+        if(testTorrent?.done){
+          return testTorrent.data
         }
         const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.infohash}${id.infohash}`), null)
         if (authorStuff) {
           const folderPath = path.join(this._storage, authorStuff.dir)
-          const checkTorrent = testTorrent || await this.resOrRej(this.startTorrent(folderPath, { ...authorStuff.desc, destroyStoreOnDestroy: false }), true)
+          const checkTorrent = testTorrent?.torrent || await this.resOrRej(this.startTorrent(folderPath, { ...authorStuff.desc, destroyStoreOnDestroy: false }), true)
           if(checkTorrent.infoHash !== authorStuff.infohash){
-            this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false }) 
+            await this.resOrRej(this.stopTorrent(checkTorrent.infoHash, {destroyStore: false}), true)
+            // this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false })
             throw new Error('infohash does not match with the given infohash')
           }
-          checkTorrent.folder = folderPath
-          checkTorrent.address = null
-          checkTorrent.own = true
-          checkTorrent.infohash = checkTorrent.infoHash
-          checkTorrent.dir = authorStuff.dir
-          checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
-          checkTorrent.complete = true
-          return this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent, opts.torrent)
+          if(checkTorrent?.complete){
+            const beforeSend = this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent)
+            if(opts.errOnUnfinished){
+              if(beforeSend.done){
+                return beforeSend.data
+              } else {
+                throw new Error('torrent is not fully downloaded yet')
+              }
+            } else {
+              return beforeSend.data
+            }
+
+          } else {
+            checkTorrent.folder = folderPath
+            checkTorrent.address = null
+            checkTorrent.own = true
+            checkTorrent.infohash = checkTorrent.infoHash
+            checkTorrent.dir = authorStuff.dir
+            checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
+            checkTorrent.complete = true
+
+            const beforeSend = this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent)
+            if(opts.errOnUnfinished){
+              if(beforeSend.done){
+                return beforeSend.data
+              } else {
+                throw new Error('torrent is not fully downloaded yet')
+              }
+            } else {
+              return beforeSend.data
+            }
+          }
         } else {
           const folderPath = path.join(this._storage, id.infohash)
-          const checkTorrent = testTorrent || await this.resOrRej(this.midTorrent(id.infohash, { path: folderPath, destroyStoreOnDestroy: false }), true)
-          checkTorrent.infohash = checkTorrent.infoHash
-          await this.resOrRej(this.db.put(`${this._fixed.load}${this._fixed.infohash}${checkTorrent.infohash}`, {size: checkTorrent.length, length: checkTorrent.files.length, infohash: checkTorrent.infohash, name: checkTorrent.name, dir: checkTorrent.dir}), true)
-          checkTorrent.folder = folderPath
-          checkTorrent.address = null
-          checkTorrent.own = false
-          checkTorrent.dir = null
-          checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
-          checkTorrent.complete = true
-          return this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent, opts.torrent)
+          const checkTorrent = testTorrent?.torrent || await this.resOrRej(this.midTorrent(id.infohash, { path: folderPath, destroyStoreOnDestroy: false }), true)
+          if(checkTorrent?.complete){
+            const beforeSend = this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent)
+            if(opts.errOnUnfinished){
+              if(beforeSend.done){
+                return beforeSend.data
+              } else {
+                throw new Error('torrent is not fully downloaded yet')
+              }
+            } else {
+              return beforeSend.data
+            }
+
+          } else {
+            checkTorrent.infohash = checkTorrent.infoHash
+            await this.resOrRej(this.db.put(`${this._fixed.load}${this._fixed.infohash}${checkTorrent.infohash}`, {size: checkTorrent.length, length: checkTorrent.files.length, infohash: checkTorrent.infohash, name: checkTorrent.name, dir: checkTorrent.dir}), true)
+            checkTorrent.folder = folderPath
+            checkTorrent.address = null
+            checkTorrent.own = false
+            checkTorrent.dir = null
+            checkTorrent.files.forEach(file => {file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/')})
+            checkTorrent.complete = true
+
+            const beforeSend = this.sendTheTorrent(checkTorrent.infohash, pathToData, checkTorrent)
+            if(opts.errOnUnfinished){
+              if(beforeSend.done){
+                return beforeSend.data
+              } else {
+                throw new Error('torrent is not fully downloaded yet')
+              }
+            } else {
+              return beforeSend.data
+            }
+          }
         }
       } else if(id.address){
-        const testTorrent = this.checkForTorrent(id.address, pathToData, opts.torrent)
-        if(testTorrent?.complete){
-          return testTorrent
+        const testTorrent = this.checkForTorrent(id.address, pathToData)
+        if(testTorrent?.done){
+          return testTorrent.data
         }
         const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.address}${id.address}`), null)
         if(authorStuff){
           const folderPath = path.join(this._storage, authorStuff.dir)
-          const checkTorrent = testTorrent || await this.resOrRej(this.startTorrent(folderPath, { ...authorStuff.desc, destroyStoreOnDestroy: true }), true)
+          const checkTorrent = testTorrent?.torrent || await this.resOrRej(this.startTorrent(folderPath, { ...authorStuff.desc, destroyStoreOnDestroy: true }), true)
           if(checkTorrent.infoHash !== authorStuff.infohash){
-            this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false })
+            await this.resOrRej(this.stopTorrent(checkTorrent.infoHash, {destroyStore: false}), true)
+            // this.webtorrent.remove(checkTorrent.infoHash, { destroyStore: false })
             throw new Error('infohash does not match with the given infohash')
           }
-  
-          const checkProperty = await this.resOrRej(this.ownData(authorStuff, checkTorrent.infoHash), true)
-          // don't overwrite the torrent's infohash even though they will both be the same
-          checkProperty.folder = folderPath
-          for (const prop in checkProperty) {
-            checkTorrent[prop] = checkProperty[prop]
+          if(checkTorrent?.complete){
+            const beforeSend = this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent)
+            if(opts.errOnUnfinished){
+              if(beforeSend.done){
+                return beforeSend.data
+              } else {
+                throw new Error('torrent is not fully downloaded yet')
+              }
+            } else {
+              return beforeSend.data
+            }
+
+          } else {
+            const checkProperty = await this.resOrRej(this.ownData(authorStuff, checkTorrent.infoHash), true)
+            // don't overwrite the torrent's infohash even though they will both be the same
+            checkProperty.folder = folderPath
+            for (const prop in checkProperty) {
+              checkTorrent[prop] = checkProperty[prop]
+            }
+            checkTorrent.dir = null
+            checkTorrent.own = true
+            checkTorrent.files.forEach(file => { file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/') })
+            checkTorrent.record = checkProperty
+            checkTorrent.complete = true
+
+            const beforeSend = this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent)
+            if(opts.errOnUnfinished){
+              if(beforeSend.done){
+                return beforeSend.data
+              } else {
+                throw new Error('torrent is not fully downloaded yet')
+              }
+            } else {
+              return beforeSend.data
+            }
           }
-          checkTorrent.dir = null
-          checkTorrent.own = true
-          checkTorrent.files.forEach(file => { file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/') })
-          checkTorrent.record = checkProperty
-          checkTorrent.complete = true
-          return this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent, opts.torrent)
         } else {
           const folderPath = path.join(this._storage, id.address)
   
@@ -385,18 +451,42 @@ module.exports = async function(){
             await fs.emptyDir(checkProperty.folder)
           }
   
-          const checkTorrent = testTorrent || await this.resOrRej(this.midTorrent(checkProperty.infohash, { path: dataPath, destroyStoreOnDestroy: false }), true)
+          const checkTorrent = testTorrent?.torrent || await this.resOrRej(this.midTorrent(checkProperty.infohash, { path: dataPath, destroyStoreOnDestroy: false }), true)
           // don't overwrite the torrent's infohash even though they will both be the same
-          for (const prop in checkProperty) {
-            checkTorrent[prop] = checkProperty[prop]
+          if(checkTorrent?.complete){
+            const beforeSend = this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent)
+            if(opts.errOnUnfinished){
+              if(beforeSend.done){
+                return beforeSend.data
+              } else {
+                throw new Error('torrent is not fully downloaded yet')
+              }
+            } else {
+              return beforeSend.data
+            }
+
+          } else {
+            for (const prop in checkProperty) {
+              checkTorrent[prop] = checkProperty[prop]
+            }
+            await this.resOrRej(this.db.put(`${this._fixed.load}${this._fixed.address}${checkTorrent.address}`, {size: checkTorrent.length, length: checkTorrent.files.length, address: checkTorrent.address, infohash: checkTorrent.infohash, name: checkTorrent.name}), true)
+            checkTorrent.own = false
+            checkTorrent.dir = null
+            checkTorrent.files.forEach(file => { file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/') })
+            checkTorrent.record = checkProperty
+            checkTorrent.complete = true
+
+            const beforeSend = this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent)
+            if(opts.errOnUnfinished){
+              if(beforeSend.done){
+                return beforeSend.data
+              } else {
+                throw new Error('torrent is not fully downloaded yet')
+              }
+            } else {
+              return beforeSend.data
+            }
           }
-          await this.resOrRej(this.db.put(`${this._fixed.load}${this._fixed.address}${checkTorrent.address}`, {size: checkTorrent.length, length: checkTorrent.files.length, address: checkTorrent.address, infohash: checkTorrent.infohash, name: checkTorrent.name}), true)
-          checkTorrent.own = false
-          checkTorrent.dir = null
-          checkTorrent.files.forEach(file => { file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/') })
-          checkTorrent.record = checkProperty
-          checkTorrent.complete = true
-          return this.sendTheTorrent(checkTorrent.address, pathToData, checkTorrent, opts.torrent)
         }
       } else {
         throw new Error('invalid identifier was used')
@@ -772,6 +862,19 @@ module.exports = async function(){
     midTorrent(id, opts){
       return new Promise((resolve, reject) => {
         this.webtorrent.add(id, opts, torrent => {
+          torrent.onData = (buf) => {
+            torrent.emit('message', buf)
+          }
+          torrent.extendTheWire = (wire, address) => {
+            wire.use(ut_message(address))
+            wire.ut_message.on('message', torrent.onData)
+          }
+          torrent.on('wire', torrent.extendTheWire)
+          torrent.say = (message) => {
+            torrent.wires.forEach((data) => {
+              data.ut_message.send(message)
+            })
+          }
           resolve(torrent)
         })
       })
@@ -779,6 +882,19 @@ module.exports = async function(){
     startTorrent(folder, opts){
       return new Promise((resolve, reject) => {
         this.webtorrent.seed(folder, opts, torrent => {
+          torrent.onData = (buf) => {
+            torrent.emit('message', buf)
+          }
+          torrent.extendTheWire = (wire, address) => {
+            wire.use(ut_message(address))
+            wire.ut_message.on('message', torrent.onData)
+          }
+          torrent.on('wire', torrent.extendTheWire)
+          torrent.say = (message) => {
+            torrent.wires.forEach((data) => {
+              data.ut_message.send(message)
+            })
+          }
           resolve(torrent)
         })
       })
@@ -787,6 +903,11 @@ module.exports = async function(){
       return new Promise((resolve, reject) => {
           const getTorrent = this.findTheTorrent(dataForTorrent)
           if (getTorrent) {
+            getTorrent.emit('undone')
+            getTorrent.wires.forEach((data) => {
+              data.ut_message.off('message', getTorrent.onData)
+            })
+            getTorrent.off('wire', getTorrent.extendTheWire)
             getTorrent.destroy(opts, (error) => {
               if (error) {
                 reject(error)
@@ -799,6 +920,7 @@ module.exports = async function(){
           }
       })
     }
+
     findTheTorrent(id){
       let data = null
       for(const torrent of this.webtorrent.torrents){
@@ -808,6 +930,10 @@ module.exports = async function(){
         }
       }
       return data
+    }
+
+    checkTheTorrent(id){
+      return this.checkId.has(id) ? this.checkId.get(id) : this.findTheTorrent(id)
     }
   
     async handleFormData(folderPath, data, fullPath) {
@@ -886,6 +1012,12 @@ module.exports = async function(){
         parseFiles.push(test)
       }
       return data ? parseFiles : parseFiles.map((data) => {if (data.address) {return data.address} else {return data.infohash}})
+    }
+
+    onWire(wire, address){}
+
+    onMessage(buf, torrent){
+
     }
   }
 }
