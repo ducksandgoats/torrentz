@@ -924,7 +924,7 @@ module.exports = async function(){
     findTheTorrent(id){
       let data = null
       for(const torrent of this.webtorrent.torrents){
-        if(torrent.address === id || torrent.infohash === id){
+        if(torrent.address === id || torrent.infohash === id || torrent.infoHash === id){
           data = torrent
           break
         }
