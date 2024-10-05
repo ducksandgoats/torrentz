@@ -19,7 +19,7 @@ import ut_msg from "ut_msg";
 
 export default class Torrentz {
   constructor (opts = {}) {
-    const defOpts = { dir: __dirname, storage: 'storage', base: 'base', routine: 3600000, dht: { verify: (sig, message, key) => {return ed.verify(sig, ArrayBuffer.isView(message) ? Buffer.from(message.buffer, message.byteOffset, message.byteLength) : message, key)} } }
+    const defOpts = { dir: import.meta.dirname, storage: 'storage', base: 'base', routine: 3600000, dht: { verify: (sig, message, key) => {return ed.verify(sig, ArrayBuffer.isView(message) ? Buffer.from(message.buffer, message.byteOffset, message.byteLength) : message, key)} } }
     const finalOpts = { ...defOpts, ...opts }
     this._routine = finalOpts.routine
     this.checkHash = /^[a-fA-F0-9]{40}$/
