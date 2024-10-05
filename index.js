@@ -12,13 +12,15 @@ import glob from "glob";
 import { Level } from "level";
 import crypto from "crypto";
 import ut_msg from "ut_msg";
+import {EventEmitter} from 'events'
 
 // saves us from saving secret keys(saving secret keys even encrypted secret keys is something i want to avoid)
 // with this function which was taken from the bittorrent-dht package
 // we save only the signatures when we first publish a BEP46 torrent
 
-export default class Torrentz {
+export default class Torrentz extends EventEmitter {
   constructor (opts = {}) {
+    super()
     const defOpts = { dir: import.meta.dirname, storage: 'storage', base: 'base', routine: 3600000, dht: { verify: (sig, message, key) => {return ed.verify(sig, ArrayBuffer.isView(message) ? Buffer.from(message.buffer, message.byteOffset, message.byteLength) : message, key)} } }
     const finalOpts = { ...defOpts, ...opts }
     this._routine = finalOpts.routine
@@ -39,7 +41,7 @@ export default class Torrentz {
     globalThis.WRTC = wrtc
     
     this.webtorrent.on('error', error => {
-      console.error(error)
+      this.emit('err', error)
     })
 
     this.checkId = new Map()
@@ -864,8 +866,8 @@ export default class Torrentz {
         torrent.onData = (buf) => {
           torrent.emit('msg', buf)
         }
-        torrent.extendTheWire = (wire, address) => {
-          wire.use(ut_msg(address))
+        torrent.extendTheWire = (wire, addr) => {
+          wire.use(ut_msg(addr))
           wire.ut_msg.on('msg', torrent.onData)
         }
         torrent.on('wire', torrent.extendTheWire)
@@ -884,8 +886,8 @@ export default class Torrentz {
         torrent.onData = (buf) => {
           torrent.emit('msg', buf)
         }
-        torrent.extendTheWire = (wire, address) => {
-          wire.use(ut_msg(address))
+        torrent.extendTheWire = (wire, addr) => {
+          wire.use(ut_msg(addr))
           wire.ut_msg.on('msg', torrent.onData)
         }
         torrent.on('wire', torrent.extendTheWire)
