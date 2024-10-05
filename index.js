@@ -12,7 +12,7 @@ module.exports = async function(){
   const glob = require("glob")
   const { Level } = require('level')
   const crypto = require('crypto')
-  const ut_message = await import('ut_message')
+  const ut_msg = await import('ut_msg')
   
   // saves us from saving secret keys(saving secret keys even encrypted secret keys is something i want to avoid)
   // with this function which was taken from the bittorrent-dht package
@@ -863,16 +863,16 @@ module.exports = async function(){
       return new Promise((resolve, reject) => {
         this.webtorrent.add(id, opts, torrent => {
           torrent.onData = (buf) => {
-            torrent.emit('message', buf)
+            torrent.emit('msg', buf)
           }
           torrent.extendTheWire = (wire, address) => {
-            wire.use(ut_message(address))
-            wire.ut_message.on('message', torrent.onData)
+            wire.use(ut_msg(address))
+            wire.ut_msg.on('msg', torrent.onData)
           }
           torrent.on('wire', torrent.extendTheWire)
           torrent.say = (message) => {
             torrent.wires.forEach((data) => {
-              data.ut_message.send(message)
+              data.ut_msg.send(message)
             })
           }
           resolve(torrent)
@@ -883,16 +883,16 @@ module.exports = async function(){
       return new Promise((resolve, reject) => {
         this.webtorrent.seed(folder, opts, torrent => {
           torrent.onData = (buf) => {
-            torrent.emit('message', buf)
+            torrent.emit('msg', buf)
           }
           torrent.extendTheWire = (wire, address) => {
-            wire.use(ut_message(address))
-            wire.ut_message.on('message', torrent.onData)
+            wire.use(ut_msg(address))
+            wire.ut_msg.on('msg', torrent.onData)
           }
           torrent.on('wire', torrent.extendTheWire)
           torrent.say = (message) => {
             torrent.wires.forEach((data) => {
-              data.ut_message.send(message)
+              data.ut_msg.send(message)
             })
           }
           resolve(torrent)
@@ -905,7 +905,7 @@ module.exports = async function(){
           if (getTorrent) {
             getTorrent.emit('over')
             getTorrent.wires.forEach((data) => {
-              data.ut_message.off('message', getTorrent.onData)
+              data.ut_msg.off('msg', getTorrent.onData)
             })
             getTorrent.off('wire', getTorrent.extendTheWire)
             getTorrent.destroy(opts, (error) => {
