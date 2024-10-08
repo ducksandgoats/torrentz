@@ -295,9 +295,9 @@ export default class Torrentz extends EventEmitter {
         }
         if(mainData.done){
           if (path.extname(pathToData)) {
-            return mainData.files.find(file => { return pathToData === file.urlPath })
+            return opts.torrent ? {data: mainData.files.find(file => { return pathToData === file.urlPath }), torrent: mainData} : mainData.files.find(file => { return pathToData === file.urlPath })
           } else {
-            return mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })
+            return opts.torrent ? {data: mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) }), torrent: mainData} : mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })
           }
         } else {
           throw new Error('torrent is not fully downloaded yet')
@@ -325,9 +325,9 @@ export default class Torrentz extends EventEmitter {
           }
           if(checkTorrent.done){
             if (path.extname(pathToData)) {
-              return checkTorrent.files.find(file => { return pathToData === file.urlPath })
+              return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
             } else {
-              return checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
+              return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
             }
           } else {
             throw new Error('torrent is not fully downloaded yet')
@@ -349,9 +349,9 @@ export default class Torrentz extends EventEmitter {
           }
           if(checkTorrent.done){
             if (path.extname(pathToData)) {
-              return checkTorrent.files.find(file => { return pathToData === file.urlPath })
+              return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
             } else {
-              return checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
+              return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
             }
           } else {
             throw new Error('torrent is not fully downloaded yet')
@@ -367,9 +367,9 @@ export default class Torrentz extends EventEmitter {
         }
         if(mainData.done){
           if (path.extname(pathToData)) {
-            return mainData.files.find(file => { return pathToData === file.urlPath })
+            return opts.torrent ? {data: mainData.files.find(file => { return pathToData === file.urlPath }), torrent: mainData} : mainData.files.find(file => { return pathToData === file.urlPath })
           } else {
-            return mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })
+            return opts.torrent ? {data: mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) }), torrent: mainData} : mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })
           }
         } else {
           throw new Error('torrent is not fully downloaded yet')
@@ -401,9 +401,9 @@ export default class Torrentz extends EventEmitter {
           }
           if(checkTorrent.done){
             if (path.extname(pathToData)) {
-              return checkTorrent.files.find(file => { return pathToData === file.urlPath })
+              return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
             } else {
-              return checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
+              return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
             }
           } else {
             throw new Error('torrent is not fully downloaded yet')
@@ -437,9 +437,9 @@ export default class Torrentz extends EventEmitter {
           }
           if(checkTorrent.done){
             if (path.extname(pathToData)) {
-              return checkTorrent.files.find(file => { return pathToData === file.urlPath })
+              return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
             } else {
-              return checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
+              return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
             }
           } else {
             throw new Error('torrent is not fully downloaded yet')
@@ -455,9 +455,9 @@ export default class Torrentz extends EventEmitter {
         }
         if(mainData.done){
           if (path.extname(pathToData)) {
-            return mainData.files.find(file => { return pathToData === file.urlPath })
+            return opts.torrent ? {data: mainData.files.find(file => { return pathToData === file.urlPath }), torrent: mainData} : mainData.files.find(file => { return pathToData === file.urlPath })
           } else {
-            return mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })
+            return opts.torrent ? {data: mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) }), torrent: mainData} : mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })
           }
         } else {
           throw new Error('torrent is not fully downloaded yet')
@@ -489,9 +489,9 @@ export default class Torrentz extends EventEmitter {
           }
           if(checkTorrent.done){
             if (path.extname(pathToData)) {
-              return checkTorrent.files.find(file => { return pathToData === file.urlPath })
+              return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
             } else {
-              return checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
+              return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
             }
           } else {
             throw new Error('torrent is not fully downloaded yet')
@@ -527,9 +527,9 @@ export default class Torrentz extends EventEmitter {
           }
           if(checkTorrent.done){
             if (path.extname(pathToData)) {
-              return checkTorrent.files.find(file => { return pathToData === file.urlPath })
+              return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
             } else {
-              return checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
+              return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
             }
           } else {
             throw new Error('torrent is not fully downloaded yet')
