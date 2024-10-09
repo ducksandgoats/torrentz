@@ -25,6 +25,7 @@ export default class Torrentz extends EventEmitter {
     const finalOpts = { ...defOpts, ...opts }
     this._routine = finalOpts.routine
     this.checkHash = /^[a-fA-F0-9]{40}$/
+    this.checkAddress = /^[a-fA-F0-9]{64}$/
 
     finalOpts.dir = path.resolve(finalOpts.dir)
     this._storage = path.join(finalOpts.dir, finalOpts.storage)
@@ -281,14 +282,16 @@ export default class Torrentz extends EventEmitter {
     }
   }
 
-  async loadTorrent(id, pathToData, opts = {}){
+  async loadTorrent(id = null, pathToData, opts = {}){
     if(!opts){
       opts = {}
     }
 
-    if(id.infohash){
-      const hasIt = this.checkId.has(id.infohash)
-      const mainData = hasIt ? this.checkId.get(id.infohash) : this.findTheTorrent(id.infohash)
+    if(!id === null){
+      throw new Error('invalid identifier was used')
+    } else if(this.checkHash.test(id)){
+      const hasIt = this.checkId.has(id)
+      const mainData = hasIt ? this.checkId.get(id) : this.findTheTorrent(id)
       if (mainData && mainData.complete) {
         if (!hasIt) {
           this.checkId.set(mainData.infohash, mainData)
@@ -303,7 +306,7 @@ export default class Torrentz extends EventEmitter {
           throw new Error('torrent is not fully downloaded yet')
         }
       } else {
-        const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.infohash}${id.infohash}`), null)
+        const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.infohash}${id}`), null)
         if (authorStuff) {
           const folderPath = path.join(this._storage, authorStuff.dir)
           const checkTorrent = mainData || await this.resOrRej(this.startTorrent(folderPath, { ...authorStuff.desc, destroyStoreOnDestroy: false }), true)
@@ -333,8 +336,8 @@ export default class Torrentz extends EventEmitter {
             throw new Error('torrent is not fully downloaded yet')
           }
         } else {
-          const folderPath = path.join(this._storage, id.infohash)
-          const checkTorrent = mainData || await this.resOrRej(this.midTorrent(id.infohash, { path: folderPath, destroyStoreOnDestroy: false }), true)
+          const folderPath = path.join(this._storage, id)
+          const checkTorrent = mainData || await this.resOrRej(this.midTorrent(id, { path: folderPath, destroyStoreOnDestroy: false }), true)
           checkTorrent.infohash = checkTorrent.infoHash
           await this.resOrRej(this.db.put(`${this._fixed.load}${this._fixed.infohash}${checkTorrent.infohash}`, {size: checkTorrent.length, length: checkTorrent.files.length, infohash: checkTorrent.infohash, name: checkTorrent.name, dir: checkTorrent.dir}), true)
           checkTorrent.folder = folderPath
@@ -358,9 +361,9 @@ export default class Torrentz extends EventEmitter {
           }
         }
       }
-    } else if(id.address){
-      const hasIt = this.checkId.has(id.infohash)
-      const mainData = hasIt ? this.checkId.get(id.address) : this.findTheTorrent(id.address)
+    } else if(this.checkAddress.test(id)){
+      const hasIt = this.checkId.has(id)
+      const mainData = hasIt ? this.checkId.get(id) : this.findTheTorrent(id)
       if (mainData && mainData.complete) {
         if (!hasIt) {
           this.checkId.set(mainData.address, mainData)
@@ -375,7 +378,7 @@ export default class Torrentz extends EventEmitter {
           throw new Error('torrent is not fully downloaded yet')
         }
       } else {
-        const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.address}${id.address}`), null)
+        const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.address}${id}`), null)
         if(authorStuff){
           const folderPath = path.join(this._storage, authorStuff.dir)
           const checkTorrent = mainData || await this.resOrRej(this.startTorrent(folderPath, { ...authorStuff.desc, destroyStoreOnDestroy: true }), true)
@@ -409,9 +412,9 @@ export default class Torrentz extends EventEmitter {
             throw new Error('torrent is not fully downloaded yet')
           }
         } else {
-          const folderPath = path.join(this._storage, id.address)
+          const folderPath = path.join(this._storage, id)
   
-          const checkProperty = await this.resOrRej(this.resolveFunc(id.address), true)
+          const checkProperty = await this.resOrRej(this.resolveFunc(id), true)
   
           checkProperty.folder = folderPath
           const dataPath = path.join(checkProperty.folder, checkProperty.infohash)
@@ -446,9 +449,9 @@ export default class Torrentz extends EventEmitter {
           }
         }
       }
-    } else if(id.msg){
-      const hasIt = this.checkId.has(id.msg)
-      const mainData = hasIt ? this.checkId.get(id.msg) : this.findTheTorrent(id.msg)
+    } else {
+      const hasIt = this.checkId.has(id)
+      const mainData = hasIt ? this.checkId.get(id) : this.findTheTorrent(id)
       if (mainData && mainData.complete) {
         if (!hasIt) {
           this.checkId.set(mainData.msg, mainData)
@@ -463,7 +466,7 @@ export default class Torrentz extends EventEmitter {
           throw new Error('torrent is not fully downloaded yet')
         }
       } else {
-        const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.msg}${id.msg}`), null)
+        const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.msg}${id}`), null)
         if (authorStuff) {
           const folderPath = path.join(this._storage, authorStuff.dir)
           const checkTorrent = mainData || await this.resOrRej(this.startTorrent(Buffer.from(authorStuff.msg), { ...authorStuff.desc, destroyStoreOnDestroy: false, path: folderPath }), true)
@@ -497,7 +500,7 @@ export default class Torrentz extends EventEmitter {
             throw new Error('torrent is not fully downloaded yet')
           }
         } else {
-          const authorStuff = {msg: id.msg, infohash: null, dir: uid(20), desc: {}}
+          const authorStuff = {msg: id, infohash: null, dir: uid(20), desc: {}}
       
           const folderPath = path.join(this._storage, authorStuff.dir)
     
@@ -536,15 +539,15 @@ export default class Torrentz extends EventEmitter {
           }
         }
       }
-    } else {
-      throw new Error('invalid identifier was used')
     }
   }
-  async publishTorrent(id, pathToData, data, opts = {}){
+  async publishTorrent(id = null, pathToData, data, opts = {}){
     if(!opts){
       opts = {}
     }
-    if(id.infohash || id.infohash === null){
+    if(id === null){
+      throw new Error('invalid identifier was used')
+    } else if(this.checkHash.test(id) || id === false){
 
       const authorStuff = id.infohash ? await (async () => { await this.takeOutTorrent(id.infohash, { destroyStore: false }); return await this.db.get(`${this._fixed.seed}${this._fixed.infohash}${id.infohash}`);})() : {infohash: null, dir: uid(20), desc: {}}
       
@@ -573,19 +576,19 @@ export default class Torrentz extends EventEmitter {
       await this.db.put(`${this._fixed.seed}${this._fixed.infohash}${authorStuff.infohash}`, authorStuff)
 
       return { path: pathToData, ...authorStuff, saved }
-    } else if ((id.address && id.secret) || (id.address === null && id.secret === null)) {
+    } else if ((this.checkAddress.test(id) && opts.secret) || (id === true && !opts.secret)) {
 
-      if (id.address && id.secret) {
-        await this.takeOutTorrent(id.address, { destroyStore: false })
+      if (id && opts.secret) {
+        await this.takeOutTorrent(id, { destroyStore: false })
         id.provided = true
-      }  else if (id.address === null && id.secret === null) {
+      }  else if (id === true && !opts.secret) {
         id = this.createKeypair()
         id.provided = false
       } else {
         throw new Error('data is invalid')
       }
 
-      const authorStuff = id.provided ? await (async () => { let test; try { test = await this.db.get(`${this._fixed.seed}${this._fixed.address}${id.address}`); test.sequence = test.sequence + 1; } catch (e) { console.error(e); test = { address: id.address, sequence: 0, dir: uid(20), desc: {}, stuff: {} }; } return test; })() : {address: id.address, sequence: 0, dir: uid(20), desc: {}, stuff: {}}
+      const authorStuff = id.provided ? await (async () => { let test; try { test = await this.db.get(`${this._fixed.seed}${this._fixed.address}${id}`); test.sequence = test.sequence + 1; } catch (e) { console.error(e); test = { address: id, sequence: 0, dir: uid(20), desc: {}, stuff: {} }; } return test; })() : {address: id, sequence: 0, dir: uid(20), desc: {}, stuff: {}}
       const folderPath = path.join(this._storage, authorStuff.dir)
 
       // await fs.ensureDir(folderPath)
@@ -599,7 +602,7 @@ export default class Torrentz extends EventEmitter {
 
       const checkTorrent = await this.resOrRej(this.dataFromTorrent(folderPath, authorStuff.desc), true)
 
-      const checkProperty = await this.resOrRej(this.publishFunc(authorStuff.address, id.secret, { ih: checkTorrent.infoHash, ...authorStuff.stuff }, authorStuff.sequence), true)
+      const checkProperty = await this.resOrRej(this.publishFunc(authorStuff.address, opts.secret, { ih: checkTorrent.infoHash, ...authorStuff.stuff }, authorStuff.sequence), true)
       // don't overwrite the torrent's infohash even though they will both be the same
       // checkProperty.folder = folderPath
       checkProperty.dir = authorStuff.dir
@@ -611,12 +614,12 @@ export default class Torrentz extends EventEmitter {
 
       checkTorrent.record = checkProperty
 
-      return {secret: id.secret || null, seed: id.seed || null, address: id.address || null, path: pathToData, ...checkProperty, saved}
-    } else if(id.msg){
+      return {secret: opts.secret || null, seed: id.seed || null, address: id || null, path: pathToData, ...checkProperty, saved}
+    } else {
       if(pathToData !== '/' || data){
         throw new Error('path must be / and can not contain data')
       }
-      const authorStuff = await (async () => { await this.takeOutTorrent(id.msg, { destroyStore: false }); const test = await this.db.get(`${this._fixed.seed}${this._fixed.msg}${id.msg}`);return test || {msg: id.msg, infohash: null, dir: uid(20), desc: {}};})()
+      const authorStuff = await (async () => { await this.takeOutTorrent(id, { destroyStore: false }); const test = await this.db.get(`${this._fixed.seed}${this._fixed.msg}${id}`);return test || {msg: id, infohash: null, dir: uid(20), desc: {}};})()
       
       const folderPath = path.join(this._storage, authorStuff.dir)
 
@@ -639,23 +642,23 @@ export default class Torrentz extends EventEmitter {
       await this.db.put(`${this._fixed.seed}${this._fixed.msg}${authorStuff.msg}`, authorStuff)
 
       return { path: pathToData, ...authorStuff, saved: null }
-    } else {
-      throw new Error('data is invalid')
     }
   }
-  async shredTorrent(info, pathToData, opts = {}){
+  async shredTorrent(info = null, pathToData, opts = {}){
     if(!opts){
       opts = {}
     }
 
-    if(info.infohash){
-      if(this.checkId.has(info.infohash)){
-        this.checkId.delete(info.infohash)
+    if(info === null){
+      throw new Error('invalid identifier was used')
+    } else if(this.checkHash.test(info)){
+      if(this.checkId.has(info)){
+        this.checkId.delete(info)
       }
   
-      const activeTorrent = await this.resOrRej(this.stopTorrent(info.infohash, { destroyStore: false }), true)
+      const activeTorrent = await this.resOrRej(this.stopTorrent(info, { destroyStore: false }), true)
 
-      const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.infohash}${info.infohash}`), false)
+      const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.infohash}${info}`), false)
       if(authorStuff){
         const folderPath = path.join(this._storage, authorStuff.dir)
         const dataPath = path.join(folderPath, pathToData)
@@ -669,7 +672,7 @@ export default class Torrentz extends EventEmitter {
           await fs.remove(folderPath)
           await this.db.del(`${this._fixed.seed}${this._fixed.infohash}${authorStuff.infohash}`)
           
-          return {id: info.infohash, path: pathToData, ...authorStuff, activeTorrent}
+          return {id: info, path: pathToData, ...authorStuff, activeTorrent}
         } else {
           if(await fs.pathExists(dataPath)){
             await fs.remove(dataPath)
@@ -695,10 +698,10 @@ export default class Torrentz extends EventEmitter {
           
           await this.db.put(`${this._fixed.seed}${this._fixed.infohash}${authorStuff.infohash}`, authorStuff)
 
-          return {id: info.infohash, path: pathToData, ...authorStuff, activeTorrent}
+          return {id: info, path: pathToData, ...authorStuff, activeTorrent}
         }
       } else {
-        const nfoData = await this.db.get(`${this._fixed.load}${this._fixed.infohash}${info.infohash}`)
+        const nfoData = await this.db.get(`${this._fixed.load}${this._fixed.infohash}${info}`)
         const folderPath = path.join(this._storage, nfoData.infohash)
   
         if(!await fs.pathExists(folderPath)){
@@ -710,7 +713,7 @@ export default class Torrentz extends EventEmitter {
           await fs.remove(folderPath)
           await this.db.del(`${this._fixed.load}${this._fixed.infohash}${nfoData.infohash}`)
 
-          return {id: info.infohash, path: pathToData, ...nfoData, activeTorrent}
+          return {id: info, path: pathToData, ...nfoData, activeTorrent}
         } else {
           const dirPath = path.join(folderPath, nfoData.name)
           const testPath = path.join(dirPath, pathToData)
@@ -725,16 +728,16 @@ export default class Torrentz extends EventEmitter {
             throw new Error('torrent can not be empty')
           }
           const testData = await this.echoHash(nfoData.infohash, folderPath, dirPath)
-          return {id: info.infohash, path: pathToData, ...testData, activeTorrent}
+          return {id: info, path: pathToData, ...testData, activeTorrent}
         }
       }
-    } else if(info.address){
-      if(this.checkId.has(info.address)){
-        this.checkId.delete(info.address)
+    } else if(this.checkAddress.test(info)){
+      if(this.checkId.has(info)){
+        this.checkId.delete(info)
       }
-      const activeTorrent = await this.resOrRej(this.stopTorrent(info.address, { destroyStore: false }), true)
+      const activeTorrent = await this.resOrRej(this.stopTorrent(info, { destroyStore: false }), true)
 
-      const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.address}${info.address}`), false)
+      const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.address}${info}`), false)
       if(authorStuff){
         const folderPath = path.join(this._storage, authorStuff.dir)
         const dataPath = path.join(folderPath, pathToData)
@@ -748,7 +751,7 @@ export default class Torrentz extends EventEmitter {
           await fs.remove(folderPath)
           await this.db.del(`${this._fixed.seed}${this._fixed.address}${authorStuff.address}`)
 
-          return {id: info.address, path: pathToData, ...authorStuff, activeTorrent}
+          return {id: info, path: pathToData, ...authorStuff, activeTorrent}
         } else {
           if(!info.secret){
             throw new Error('secret key is request')
@@ -776,10 +779,10 @@ export default class Torrentz extends EventEmitter {
 
           await this.db.put(`${this._fixed.seed}${this._fixed.address}${dataFromProp.address}`, dataFromProp)
   
-          return {id: info.address, path: pathToData, ...authorStuff, activeTorrent}
+          return {id: info, path: pathToData, ...authorStuff, activeTorrent}
         }
       } else {
-        const nfoData = await this.db.get(`${this._fixed.load}${this._fixed.address}${info.address}`)
+        const nfoData = await this.db.get(`${this._fixed.load}${this._fixed.address}${info}`)
         const folderPath = path.join(this._storage, nfoData.address)
   
         if(!await fs.pathExists(folderPath)){
@@ -791,7 +794,7 @@ export default class Torrentz extends EventEmitter {
           await fs.remove(folderPath)
           await this.db.del(`${this._fixed.load}${this._fixed.address}${nfoData.address}`)
 
-          return {id: info.address, path: pathToData, ...nfoData, activeTorrent}
+          return {id: info, path: pathToData, ...nfoData, activeTorrent}
         } else {
           const mainPath = path.join(folderPath, nfoData.infohash)
           const dataPath = path.join(mainPath, nfoData.name)
@@ -807,20 +810,20 @@ export default class Torrentz extends EventEmitter {
             throw new Error('torrent can not be empty')
           }
           const testData = await this.echoAddress(nfoData.address, folderPath, dataPath)
-          return {id: info.address, path: pathToData, ...testData, activeTorrent}
+          return {id: info, path: pathToData, ...testData, activeTorrent}
         }
       }
-    } else if(info.msg){
+    } else {
       if(pathToData !== '/'){
         throw new Error('path must be / when deleting torrents for messages')
       }
-      if(this.checkId.has(info.msg)){
-        this.checkId.delete(info.msg)
+      if(this.checkId.has(info)){
+        this.checkId.delete(info)
       }
   
-      const activeTorrent = await this.resOrRej(this.stopTorrent(info.msg, { destroyStore: false }), true)
+      const activeTorrent = await this.resOrRej(this.stopTorrent(info, { destroyStore: false }), true)
 
-      const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.msg}${info.msg}`), false)
+      const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.msg}${info}`), false)
       if(authorStuff){
         const folderPath = path.join(this._storage, authorStuff.dir)
   
@@ -831,12 +834,10 @@ export default class Torrentz extends EventEmitter {
         await fs.remove(folderPath)
         await this.db.del(`${this._fixed.seed}${this._fixed.msg}${authorStuff.msg}`)
         
-        return {id: info.msg, path: pathToData, ...authorStuff, torrent: activeTorrent}
+        return {id: info, path: pathToData, ...authorStuff, torrent: activeTorrent}
       } else {
-        return {id: info.msg, path: pathToData, torrent: activeTorrent}
+        return {id: info, path: pathToData, torrent: activeTorrent}
       }
-    } else {
-      throw new Error('data is invalid')
     }
   }
   async dataFromTorrent(folder, opts){
