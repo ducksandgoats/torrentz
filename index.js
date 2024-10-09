@@ -576,12 +576,12 @@ export default class Torrentz extends EventEmitter {
       await this.db.put(`${this._fixed.seed}${this._fixed.infohash}${authorStuff.infohash}`, authorStuff)
 
       return { path: pathToData, ...authorStuff, saved }
-    } else if ((this.checkAddress.test(id) && opts.secret) || (id === true && !opts.secret)) {
+    } else if ((this.checkAddress.test(id) && opts.extra) || (id === true && !opts.extra)) {
 
-      if (id && opts.secret) {
+      if (id && opts.extra) {
         await this.takeOutTorrent(id, { destroyStore: false })
         id.provided = true
-      }  else if (id === true && !opts.secret) {
+      }  else if (id === true && !opts.extra) {
         id = this.createKeypair()
         id.provided = false
       } else {
@@ -602,7 +602,7 @@ export default class Torrentz extends EventEmitter {
 
       const checkTorrent = await this.resOrRej(this.dataFromTorrent(folderPath, authorStuff.desc), true)
 
-      const checkProperty = await this.resOrRej(this.publishFunc(authorStuff.address, opts.secret, { ih: checkTorrent.infoHash, ...authorStuff.stuff }, authorStuff.sequence), true)
+      const checkProperty = await this.resOrRej(this.publishFunc(authorStuff.address, opts.extra, { ih: checkTorrent.infoHash, ...authorStuff.stuff }, authorStuff.sequence), true)
       // don't overwrite the torrent's infohash even though they will both be the same
       // checkProperty.folder = folderPath
       checkProperty.dir = authorStuff.dir
@@ -614,7 +614,7 @@ export default class Torrentz extends EventEmitter {
 
       checkTorrent.record = checkProperty
 
-      return {secret: opts.secret || null, seed: id.seed || null, address: id || null, path: pathToData, ...checkProperty, saved}
+      return {secret: opts.extra || null, seed: id.seed || null, address: id || null, path: pathToData, ...checkProperty, saved}
     } else {
       if(pathToData !== '/' || data){
         throw new Error('path must be / and can not contain data')
@@ -753,7 +753,7 @@ export default class Torrentz extends EventEmitter {
 
           return {id: info, path: pathToData, ...authorStuff, activeTorrent}
         } else {
-          if(!info.secret){
+          if(!info.extra){
             throw new Error('secret key is request')
           }
           if(await fs.pathExists(dataPath)){
@@ -771,7 +771,7 @@ export default class Torrentz extends EventEmitter {
   
           const dataFromFolder = await this.resOrRej(this.dataFromTorrent(folderPath, authorStuff.desc), async () => {await fs.remove(folderPath);await this.db.del(`${this._fixed.seed}${this._fixed.address}${authorStuff.address}`);})
 
-          const dataFromProp = await this.resOrRej(this.publishFunc(authorStuff.address, info.secret, {...authorStuff.stuff, ih: dataFromFolder.infoHash}, authorStuff.sequence + 1), true)
+          const dataFromProp = await this.resOrRej(this.publishFunc(authorStuff.address, info.extra, {...authorStuff.stuff, ih: dataFromFolder.infoHash}, authorStuff.sequence + 1), true)
           dataFromProp.dir = authorStuff.dir
           dataFromProp.desc = authorStuff.desc
           dataFromProp.length = dataFromFolder.length
@@ -868,7 +868,7 @@ export default class Torrentz extends EventEmitter {
     const stuffPath = opts.stuff || {}
     const dataFromDir = await this.dataFromTorrent(dirPath, descripPath)
     const pairID = this.createKeypair()
-    const pubTorrentData = await this.publishFunc(pairID.address, pairID.secret, {ih: dataFromDir.infoHash, ...stuffPath}, 0)
+    const pubTorrentData = await this.publishFunc(pairID.address, pairID.extra, {ih: dataFromDir.infoHash, ...stuffPath}, 0)
     pubTorrentData.dir = dir
     pubTorrentData.desc = descripPath
     pubTorrentData.echo = id
