@@ -336,7 +336,7 @@ export default class Torrentz extends EventEmitter {
           const checkTorrent = mainData || await this.resOrRej(this.midTorrent(id, { path: folderPath, destroyStoreOnDestroy: false }), true)
           checkTorrent.infohash = checkTorrent.infoHash
           checkTorrent.id = checkTorrent.infoHash
-          await this.resOrRej(this.db.put(`${this._fixed.load}${this._fixed.infohash}${checkTorrent.infohash}`, {size: checkTorrent.length, length: checkTorrent.files.length, infohash: checkTorrent.infohash, name: checkTorrent.name, dir: checkTorrent.dir}), true)
+          await this.resOrRej(this.db.put(`${this._fixed.load}${this._fixed.infohash}${checkTorrent.infohash}`, {id: checkTorrent.id, size: checkTorrent.length, length: checkTorrent.files.length, infohash: checkTorrent.infohash, name: checkTorrent.name, dir: checkTorrent.dir}), true)
           checkTorrent.folder = folderPath
           checkTorrent.address = null
           checkTorrent.msg = null
@@ -432,7 +432,7 @@ export default class Torrentz extends EventEmitter {
           checkTorrent.id = checkTorrent.address
           checkTorrent.msg = null
           checkTorrent.infohash = null
-          await this.resOrRej(this.db.put(`${this._fixed.load}${this._fixed.address}${checkTorrent.address}`, {size: checkTorrent.length, length: checkTorrent.files.length, address: checkTorrent.address, infohash: checkTorrent.infohash, name: checkTorrent.name}), true)
+          await this.resOrRej(this.db.put(`${this._fixed.load}${this._fixed.address}${checkTorrent.address}`, {id: checkTorrent.id, size: checkTorrent.length, length: checkTorrent.files.length, address: checkTorrent.address, infohash: checkTorrent.infohash, name: checkTorrent.name}), true)
           checkTorrent.own = false
           checkTorrent.dir = null
           checkTorrent.files.forEach(file => { file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/') })
@@ -506,7 +506,7 @@ export default class Torrentz extends EventEmitter {
             throw new Error('torrent is not fully downloaded yet')
           }
         } else {
-          const authorStuff = {msg: id, infohash: null, dir: uid(20), desc: {}}
+          const authorStuff = {id, msg: id, infohash: null, dir: uid(20), desc: {}}
       
           const folderPath = path.join(this._storage, authorStuff.dir)
     
@@ -705,6 +705,7 @@ export default class Torrentz extends EventEmitter {
           if (authorStuff.infohash !== dataFromFolder.infoHash) {
             await this.db.del(`${this._fixed.seed}${this._fixed.infohash}${authorStuff.infohash}`)
             authorStuff.infohash = dataFromFolder.infoHash
+            authorStuff.id = authorStuff.infohash
             authorStuff.length = dataFromFolder.length
             authorStuff.count = dataFromFolder.files.length
           }
@@ -789,6 +790,7 @@ export default class Torrentz extends EventEmitter {
           dataFromProp.desc = authorStuff.desc
           dataFromProp.length = dataFromFolder.length
           dataFromProp.count = dataFromFolder.files.length
+          dataFromProp.id = dataFromProp.address
 
           await this.db.put(`${this._fixed.seed}${this._fixed.address}${dataFromProp.address}`, dataFromProp)
   
@@ -885,6 +887,7 @@ export default class Torrentz extends EventEmitter {
     pubTorrentData.dir = dir
     pubTorrentData.desc = descripPath
     pubTorrentData.echo = id
+    pubTorrentData.id = id
     pubTorrentData.length = dataFromDir.length
     pubTorrentData.count = dataFromDir.files.length
     await this.db.put(`${this._fixed.seed}${this._fixed.address}${pubTorrentData.address}`, pubTorrentData)
@@ -906,7 +909,7 @@ export default class Torrentz extends EventEmitter {
     await fs.remove(folderPath)
     await this.db.del(`${this._fixed.load}${this._fixed.infohash}${id}`)
     const dataFromDir = await this.dataFromTorrent(dirPath, descripPath)
-    const pubTorrentData = { infohash: dataFromDir.infoHash, dir: dir, echo: id, desc: descripPath, size: dataFromDir.length, length: dataFromDir.files.length }
+    const pubTorrentData = { id, infohash: dataFromDir.infoHash, dir: dir, echo: id, desc: descripPath, size: dataFromDir.length, length: dataFromDir.files.length }
     await this.db.put(`${this._fixed.seed}${this._fixed.infohash}${pubTorrentData.infohash}`, pubTorrentData)
     return pubTorrentData
   }
