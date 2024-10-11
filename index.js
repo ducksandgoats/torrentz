@@ -960,7 +960,9 @@ export default class Torrentz extends EventEmitter {
           torrent.on('wire', torrent.extendTheWire)
           torrent.say = (message) => {
             torrent.wires.forEach((data) => {
-              data.ut_msg.send(message)
+              if(data.ut_msg){
+                data.ut_msg.send(message)
+              }
             })
           }
         }
