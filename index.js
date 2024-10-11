@@ -322,14 +322,10 @@ export default class Torrentz extends EventEmitter {
           if(!this.checkId.has(checkTorrent.infoHash)){
             this.checkId.set(checkTorrent.infoHash, checkTorrent)
           }
-          if(checkTorrent.done){
-            if (path.extname(pathToData)) {
-              return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
-            } else {
-              return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
-            }
+          if (path.extname(pathToData)) {
+            return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
           } else {
-            throw new Error('torrent is not fully downloaded yet')
+            return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
           }
         } else {
           const folderPath = path.join(this._storage, id)
@@ -403,14 +399,10 @@ export default class Torrentz extends EventEmitter {
           if(!this.checkId.has(checkTorrent.address)){
             this.checkId.set(checkTorrent.address, checkTorrent)
           }
-          if(checkTorrent.done){
-            if (path.extname(pathToData)) {
-              return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
-            } else {
-              return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
-            }
+          if (path.extname(pathToData)) {
+            return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
           } else {
-            throw new Error('torrent is not fully downloaded yet')
+            return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
           }
         } else {
           const folderPath = path.join(this._storage, id)
@@ -496,14 +488,10 @@ export default class Torrentz extends EventEmitter {
           if(!this.checkId.has(checkTorrent.msg)){
             this.checkId.set(checkTorrent.msg, checkTorrent)
           }
-          if(checkTorrent.done){
-            if (path.extname(pathToData)) {
-              return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
-            } else {
-              return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
-            }
+          if (path.extname(pathToData)) {
+            return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
           } else {
-            throw new Error('torrent is not fully downloaded yet')
+            return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
           }
         } else {
           const authorStuff = {id, msg: id, infohash: null, dir: uid(20), desc: {}}
@@ -534,14 +522,10 @@ export default class Torrentz extends EventEmitter {
           if(!this.checkId.has(checkTorrent.msg)){
             this.checkId.set(checkTorrent.msg, checkTorrent)
           }
-          if(checkTorrent.done){
-            if (path.extname(pathToData)) {
-              return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
-            } else {
-              return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
-            }
+          if (path.extname(pathToData)) {
+            return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
           } else {
-            throw new Error('torrent is not fully downloaded yet')
+            return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
           }
         }
       }
