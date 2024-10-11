@@ -434,14 +434,10 @@ export default class Torrentz extends EventEmitter {
           if(!this.checkId.has(checkTorrent.address)){
             this.checkId.set(checkTorrent.address, checkTorrent)
           }
-          if(checkTorrent.done){
-            if (path.extname(pathToData)) {
-              return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
-            } else {
-              return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
-            }
+          if (path.extname(pathToData)) {
+            return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
           } else {
-            throw new Error('torrent is not fully downloaded yet')
+            return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
           }
         }
       }
