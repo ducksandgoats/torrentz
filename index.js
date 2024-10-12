@@ -434,10 +434,14 @@ export default class Torrentz extends EventEmitter {
           if(!this.checkId.has(checkTorrent.address)){
             this.checkId.set(checkTorrent.address, checkTorrent)
           }
-          if (path.extname(pathToData)) {
-            return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
+          if(checkTorrent.done){
+            if (path.extname(pathToData)) {
+              return opts.torrent ? {data: checkTorrent.files.find(file => { return pathToData === file.urlPath }), torrent: checkTorrent} : checkTorrent.files.find(file => { return pathToData === file.urlPath })
+            } else {
+              return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
+            }
           } else {
-            return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
+            throw new Error('torrent is not fully downloaded yet')
           }
         }
       }
@@ -448,14 +452,10 @@ export default class Torrentz extends EventEmitter {
         if (!hasIt) {
           this.checkId.set(mainData.msg, mainData)
         }
-        if(mainData.done){
-          if (path.extname(pathToData)) {
-            return opts.torrent ? {data: mainData.files.find(file => { return pathToData === file.urlPath }), torrent: mainData} : mainData.files.find(file => { return pathToData === file.urlPath })
-          } else {
-            return opts.torrent ? {data: mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) }), torrent: mainData} : mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })
-          }
+        if (path.extname(pathToData)) {
+          return opts.torrent ? {data: mainData.files.find(file => { return pathToData === file.urlPath }), torrent: mainData} : mainData.files.find(file => { return pathToData === file.urlPath })
         } else {
-          throw new Error('torrent is not fully downloaded yet')
+          return opts.torrent ? {data: mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) }), torrent: mainData} : mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })
         }
       } else {
         const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.msg}${id}`), null)
