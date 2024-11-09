@@ -461,7 +461,8 @@ export default class Torrentz extends EventEmitter {
         const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.msg}${id}`), null)
         if (authorStuff) {
           const folderPath = path.join(this._storage, authorStuff.dir)
-          const checkTorrent = mainData || await this.resOrRej(this.startTorrent(Buffer.from(authorStuff.msg), { ...authorStuff.desc, destroyStoreOnDestroy: false, path: folderPath }), true)
+          const name = authorStuff.name
+          const checkTorrent = mainData || await this.resOrRej(this.startTorrent(Buffer.from(authorStuff.msg), { ...authorStuff.desc, destroyStoreOnDestroy: false, path: folderPath, name }), true)
           if(authorStuff.infohash !== checkTorrent.infoHash){
             if (authorStuff.infohash) {
               await this.db.del(`${this._fixed.seed}${this._fixed.msg}${authorStuff.msg}`)
@@ -490,14 +491,15 @@ export default class Torrentz extends EventEmitter {
             return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
           }
         } else {
-          const authorStuff = {id, msg: id, infohash: null, dir: id, desc: {}}
+          const authorStuff = {id, msg: id, infohash: null, dir: id, name: id, desc: {}}
       
           const folderPath = path.join(this._storage, authorStuff.dir)
+          const name = authorStuff.name
     
           // await fs.ensureDir(folderPath)
           authorStuff.desc = opts.desc || authorStuff.desc
 
-          const checkTorrent = mainData || await this.resOrRej(this.startTorrent(Buffer.from(authorStuff.msg), { ...authorStuff.desc, destroyStoreOnDestroy: false, path: folderPath }), true)
+          const checkTorrent = mainData || await this.resOrRej(this.startTorrent(Buffer.from(authorStuff.msg), { ...authorStuff.desc, destroyStoreOnDestroy: false, path: folderPath, name }), true)
           if(authorStuff.infohash !== checkTorrent.infoHash){
             // if (authorStuff.infohash) {
             //   await this.db.del(`${this._fixed.seed}${this._fixed.msg}${authorStuff.msg}`)
