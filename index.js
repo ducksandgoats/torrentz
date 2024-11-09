@@ -490,7 +490,7 @@ export default class Torrentz extends EventEmitter {
             return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
           }
         } else {
-          const authorStuff = {id, msg: id, infohash: null, dir: uid(20), desc: {}}
+          const authorStuff = {id, msg: id, infohash: null, dir: id, desc: {}}
       
           const folderPath = path.join(this._storage, authorStuff.dir)
     
