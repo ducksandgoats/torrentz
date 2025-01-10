@@ -934,12 +934,10 @@ export default class Torrentz extends EventEmitter {
         if(Buffer.isBuffer(folder)){
           torrent.onData = (buf) => {
             try {
-              if(buf.includes(':')){
-                const i = buf.indexOf(':')
-                const o = buf.slice(0, i)
-                if(!isNaN(o)){
-                  const s = i + 1
-                  buf = buf.slice(s)
+              if(buf.includes(58)){
+                const i = buf.indexOf(58)
+                if(!isNaN(buf.subarray(0, i).toString())){
+                  buf = buf.subarray(i + 1)
                 }
               }
             } catch (e) {
