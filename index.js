@@ -933,6 +933,18 @@ export default class Torrentz extends EventEmitter {
       this.webtorrent.seed(folder, opts, torrent => {
         if(Buffer.isBuffer(folder)){
           torrent.onData = (buf) => {
+            try {
+              if(buf.includes(':')){
+                const i = buf.indexOf(':')
+                const o = buf.slice(0, i)
+                if(!isNaN(o)){
+                  const s = i + 1
+                  buf = buf.slice(s)
+                }
+              }
+            } catch (e) {
+              console.error(e)
+            }
             torrent.emit('msg', buf)
           }
           torrent.extendTheWire = (wire, addr) => {
