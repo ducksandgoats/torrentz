@@ -1,6 +1,6 @@
 {
   "name": "torrentz",
-  "version": "17.0.3",
+  "version": "17.0.4",
   "description": "",
   "main": "index.js",
   "type": "module",
@@ -21,7 +21,7 @@
     "parse-torrent": "^9.1.5",
     "streamx": "^2.13.2",
     "uid": "^2.0.0",
-    "ut_msg": "github:ducksandgoats/ut_msg",
+    "ut_msg": "^1.0.1",
     "webtorrent": "^2.1.37",
     "wrtc": "^0.4.7"
   }

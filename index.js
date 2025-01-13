@@ -909,21 +909,31 @@ export default class Torrentz extends EventEmitter {
   midTorrent(id, opts){
     return new Promise((resolve, reject) => {
       this.webtorrent.add(id, opts, torrent => {
-        // torrent.onData = (buf) => {
-        //   torrent.emit('msg', buf)
-        // }
-        // torrent.extendTheWire = (wire, addr) => {
-        //   wire.use(ut_msg(addr))
-        //   wire.ut_msg.on('msg', torrent.onData)
-        // }
-        // torrent.on('wire', torrent.extendTheWire)
-        // torrent.say = (message) => {
-        //   torrent.wires.forEach((data) => {
-        //     if(data.ut_msg){
-        //       data.ut_msg.send(message)
-        //     }
-        //   })
-        // }
+        torrent.onData = (buf) => {
+          try {
+            if(buf.includes(58)){
+              const i = buf.indexOf(58)
+              if(!isNaN(buf.subarray(0, i).toString())){
+                buf = buf.subarray(i + 1)
+              }
+            }
+          } catch (e) {
+            console.error(e)
+          }
+          torrent.emit('msg', buf)
+        }
+        torrent.extendTheWire = (wire, addr) => {
+          wire.use(ut_msg(crypto.createHash('sha1').update(addr).digest('hex')))
+          wire.ut_msg.on('msg', torrent.onData)
+        }
+        torrent.on('wire', torrent.extendTheWire)
+        torrent.say = (message) => {
+          torrent.wires.forEach((data) => {
+            if(data.ut_msg){
+              data.ut_msg.send(message)
+            }
+          })
+        }
         resolve(torrent)
       })
     })
@@ -931,32 +941,30 @@ export default class Torrentz extends EventEmitter {
   startTorrent(folder, opts){
     return new Promise((resolve, reject) => {
       this.webtorrent.seed(folder, opts, torrent => {
-        if(Buffer.isBuffer(folder)){
-          torrent.onData = (buf) => {
-            try {
-              if(buf.includes(58)){
-                const i = buf.indexOf(58)
-                if(!isNaN(buf.subarray(0, i).toString())){
-                  buf = buf.subarray(i + 1)
-                }
+        torrent.onData = (buf) => {
+          try {
+            if(buf.includes(58)){
+              const i = buf.indexOf(58)
+              if(!isNaN(buf.subarray(0, i).toString())){
+                buf = buf.subarray(i + 1)
               }
-            } catch (e) {
-              console.error(e)
             }
-            torrent.emit('msg', buf)
+          } catch (e) {
+            console.error(e)
           }
-          torrent.extendTheWire = (wire, addr) => {
-            wire.use(ut_msg(crypto.createHash('sha1').update(addr).digest('hex')))
-            wire.ut_msg.on('msg', torrent.onData)
-          }
-          torrent.on('wire', torrent.extendTheWire)
-          torrent.say = (message) => {
-            torrent.wires.forEach((data) => {
-              if(data.ut_msg){
-                data.ut_msg.send(message)
-              }
-            })
-          }
+          torrent.emit('msg', buf)
+        }
+        torrent.extendTheWire = (wire, addr) => {
+          wire.use(ut_msg(crypto.createHash('sha1').update(addr).digest('hex')))
+          wire.ut_msg.on('msg', torrent.onData)
+        }
+        torrent.on('wire', torrent.extendTheWire)
+        torrent.say = (message) => {
+          torrent.wires.forEach((data) => {
+            if(data.ut_msg){
+              data.ut_msg.send(message)
+            }
+          })
         }
         resolve(torrent)
       })
@@ -1077,5 +1085,17 @@ export default class Torrentz extends EventEmitter {
       parseFiles.push(test)
     }
     return data ? parseFiles : parseFiles.map((data) => {if (data.address) {return data.address} else {return data.infohash}})
+  }
+
+  halt(){
+    return new Promise((res, rej) => {
+      this.webtorrent.destroy((e) => {
+        if(e){
+          rej(e)
+        } else {
+          res()
+        }
+      })
+    })
   }
 }
