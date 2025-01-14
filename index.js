@@ -283,6 +283,10 @@ export default class Torrentz extends EventEmitter {
   }
 
   async loadTorrent(id, pathToData, opts){
+    if(opts.buf){
+      opts.buf = id
+      id = ''
+    }
     if(this.checkHash.test(id)){
       const hasIt = this.checkId.has(id)
       const mainData = hasIt ? this.checkId.get(id) : this.findTheTorrent(id)
@@ -446,8 +450,9 @@ export default class Torrentz extends EventEmitter {
         }
       }
     } else {
-      const hasIt = this.checkId.has(id)
-      const mainData = hasIt ? this.checkId.get(id) : this.findTheTorrent(id)
+      const useID = id || opts.buf
+      const hasIt = this.checkId.has(useID)
+      const mainData = hasIt ? this.checkId.get(useID) : this.findTheTorrent(useID)
       if (mainData && mainData.complete) {
         if (!hasIt) {
           this.checkId.set(mainData.msg, mainData)
@@ -458,7 +463,7 @@ export default class Torrentz extends EventEmitter {
           return opts.torrent ? {data: mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) }), torrent: mainData} : mainData.files.filter(file => { return file.urlPath.startsWith(pathToData) })
         }
       } else {
-        const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.msg}${id}`), null)
+        const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.msg}${useID}`), null)
         if (authorStuff) {
           const folderPath = path.join(this._storage, authorStuff.dir)
           const name = authorStuff.name
@@ -491,7 +496,7 @@ export default class Torrentz extends EventEmitter {
             return opts.torrent ? {data: checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)}), torrent: checkTorrent} : checkTorrent.files.filter(file => {return file.urlPath.startsWith(pathToData)})
           }
         } else {
-          const authorStuff = {id, msg: id, infohash: null, dir: id, name: id, desc: {}}
+          const authorStuff = {id, msg: useID, infohash: null, dir: useID, name: useID, desc: {}}
       
           const folderPath = path.join(this._storage, authorStuff.dir)
           const name = authorStuff.name
@@ -645,6 +650,10 @@ export default class Torrentz extends EventEmitter {
     }
   }
   async shredTorrent(info, pathToData, opts){
+    if(opts.buf){
+      opts.buf = info
+      info = ''
+    }
 
     if(this.checkHash.test(info)){
       if(this.checkId.has(info)){
@@ -814,13 +823,14 @@ export default class Torrentz extends EventEmitter {
       if(pathToData !== '/'){
         throw new Error('path must be / when deleting torrents for messages')
       }
-      if(this.checkId.has(info)){
-        this.checkId.delete(info)
+      const useID = info || opts.buf
+      if(this.checkId.has(useID)){
+        this.checkId.delete(useID)
       }
   
-      const activeTorrent = await this.resOrRej(this.stopTorrent(info, { destroyStore: false }), true)
+      const activeTorrent = await this.resOrRej(this.stopTorrent(useID, { destroyStore: false }), true)
 
-      const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.msg}${info}`), false)
+      const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.msg}${useID}`), false)
       if(authorStuff){
         const folderPath = path.join(this._storage, authorStuff.dir)
   
@@ -831,9 +841,9 @@ export default class Torrentz extends EventEmitter {
         await fs.remove(folderPath)
         await this.db.del(`${this._fixed.seed}${this._fixed.msg}${authorStuff.msg}`)
         
-        return {id: info, path: pathToData, ...authorStuff, torrent: activeTorrent}
+        return {id: useID, path: pathToData, ...authorStuff, torrent: activeTorrent}
       } else {
-        return {id: info, path: pathToData, torrent: activeTorrent}
+        return {id: useID, path: pathToData, torrent: activeTorrent}
       }
     }
   }
