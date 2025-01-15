@@ -924,7 +924,7 @@ export default class Torrentz extends EventEmitter {
             if(buf.includes(58)){
               const i = buf.indexOf(58)
               if(!isNaN(buf.subarray(0, i).toString())){
-                bug = buf.subarray(i + 1)
+                buf = buf.subarray(i + 1)
                 // buf = Buffer.concat([Buffer.from(id), buf.subarray(i)])
               }
             }
@@ -952,12 +952,13 @@ export default class Torrentz extends EventEmitter {
   startTorrent(folder, opts){
     return new Promise((resolve, reject) => {
       this.webtorrent.seed(folder, opts, torrent => {
-        torrent.onData = (buf) => {
+        torrent.onData = (id, buf) => {
           try {
             if(buf.includes(58)){
               const i = buf.indexOf(58)
               if(!isNaN(buf.subarray(0, i).toString())){
                 buf = buf.subarray(i + 1)
+                // buf = Buffer.concat([Buffer.from(id), buf.subarray(i)])
               }
             }
           } catch (e) {
