@@ -924,7 +924,8 @@ export default class Torrentz extends EventEmitter {
             if(buf.includes(58)){
               const i = buf.indexOf(58)
               if(!isNaN(buf.subarray(0, i).toString())){
-                buf = Buffer.concat([Buffer.from(id), buf.subarray(i)])
+                bug = buf.subarray(i + 1)
+                // buf = Buffer.concat([Buffer.from(id), buf.subarray(i)])
               }
             }
           } catch (e) {
