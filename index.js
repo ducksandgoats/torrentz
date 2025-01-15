@@ -919,12 +919,12 @@ export default class Torrentz extends EventEmitter {
   midTorrent(id, opts){
     return new Promise((resolve, reject) => {
       this.webtorrent.add(id, opts, torrent => {
-        torrent.onData = (buf) => {
+        torrent.onData = (id, buf) => {
           try {
             if(buf.includes(58)){
               const i = buf.indexOf(58)
               if(!isNaN(buf.subarray(0, i).toString())){
-                buf = buf.subarray(i + 1)
+                buf = Buffer.concat([Buffer.from(id), buf.subarray(i)])
               }
             }
           } catch (e) {
