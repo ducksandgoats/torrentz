@@ -924,7 +924,7 @@ export default class Torrentz extends EventEmitter {
             if(buf.includes(58)){
               const i = buf.indexOf(58)
               if(!isNaN(buf.subarray(0, i).toString())){
-                buf = {hashedAddress: id, data: buf.subarray(i + 1)}
+                buf = buf.subarray(i + 1)
                 // buf = Buffer.concat([Buffer.from(id), buf.subarray(i)])
               }
             }
@@ -938,22 +938,12 @@ export default class Torrentz extends EventEmitter {
           wire.ut_msg.on('msg', torrent.onData)
         }
         torrent.on('wire', torrent.extendTheWire)
-        torrent.say = (message, id) => {
-          if(id){
-            torrent.wires.forEach((data) => {
-              if(data.ut_msg){
-                if(data.ut_msg.address === id){
-                  data.ut_msg.send(message)
-                }
-              }
-            })
-          } else {
-            torrent.wires.forEach((data) => {
-              if(data.ut_msg){
-                data.ut_msg.send(message)
-              }
-            })
-          }
+        torrent.say = (message) => {
+          torrent.wires.forEach((data) => {
+            if(data.ut_msg){
+              data.ut_msg.send(message)
+            }
+          })
         }
         resolve(torrent)
       })
@@ -967,7 +957,7 @@ export default class Torrentz extends EventEmitter {
             if(buf.includes(58)){
               const i = buf.indexOf(58)
               if(!isNaN(buf.subarray(0, i).toString())){
-                buf = {hashedAddress: id, data: buf.subarray(i + 1)}
+                buf = buf.subarray(i + 1)
                 // buf = Buffer.concat([Buffer.from(id), buf.subarray(i)])
               }
             }
@@ -981,22 +971,12 @@ export default class Torrentz extends EventEmitter {
           wire.ut_msg.on('msg', torrent.onData)
         }
         torrent.on('wire', torrent.extendTheWire)
-        torrent.say = (message, id) => {
-          if(id){
-            torrent.wires.forEach((data) => {
-              if(data.ut_msg){
-                if(data.ut_msg.address === id){
-                  data.ut_msg.send(message)
-                }
-              }
-            })
-          } else {
-            torrent.wires.forEach((data) => {
-              if(data.ut_msg){
-                data.ut_msg.send(message)
-              }
-            })
-          }
+        torrent.say = (message) => {
+          torrent.wires.forEach((data) => {
+            if(data.ut_msg){
+              data.ut_msg.send(message)
+            }
+          })
         }
         resolve(torrent)
       })
