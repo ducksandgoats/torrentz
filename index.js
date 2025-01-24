@@ -640,6 +640,7 @@ export default class Torrentz extends EventEmitter {
         }
         authorStuff.infohash = checkTorrent.infoHash
       }
+      authorStuff.id = authorStuff.msg
       await this.db.put(`${this._fixed.seed}${this._fixed.msg}${authorStuff.msg}`, authorStuff)
 
       if(opts.load){
