@@ -987,13 +987,11 @@ export default class Torrentz extends EventEmitter {
     return new Promise((resolve, reject) => {
         const getTorrent = this.findTheTorrent(dataForTorrent)
         if (getTorrent) {
-          if(getTorrent.msg){
-            getTorrent.emit('over')
-            getTorrent.wires.forEach((data) => {
-              data.ut_msg.off('msg', getTorrent.onData)
-            })
-            getTorrent.off('wire', getTorrent.extendTheWire)
-          }
+          getTorrent.emit('over')
+          getTorrent.wires.forEach((data) => {
+            data.ut_msg.off('msg', getTorrent.onData)
+          })
+          getTorrent.off('wire', getTorrent.extendTheWire)
           getTorrent.destroy(opts, (error) => {
             if (error) {
               reject(error)
