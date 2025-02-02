@@ -1141,7 +1141,7 @@ export default class Torrentz extends EventEmitter {
         if(fs.pathExists(v.dir)){
           await fs.remove(v.dir)
         }
-        await this.db.del(key)
+        await this.db.del(k)
       }
     }
   }
