@@ -55,7 +55,7 @@ export default class Torrentz extends EventEmitter {
     // run the keepUpdated function every 1 hour, it keep the data active by putting the data back into the dht, don't run it if it is still working from the last time it ran the keepUpdated function
     this.session = setInterval(() => {
       if (this._readyToGo) {
-        this.keepUpdated().then(data => console.log('amount of torrents:', data)).catch(error => console.error('routine update had a reject', error))
+        this.keepUpdated().then(() => {}).catch(error => console.error('routine update had a reject', error))
       }
     }, this._routine)
   }
@@ -83,7 +83,7 @@ export default class Torrentz extends EventEmitter {
       }
     }
     this._readyToGo = true
-    return this.webtorrent.torrents.length
+    return
   }
 
   async resOrRej(res, rej){
@@ -336,6 +336,7 @@ export default class Torrentz extends EventEmitter {
           const checkTorrent = mainData || await this.resOrRej(this.midTorrent(id, { path: folderPath, destroyStoreOnDestroy: false }), true)
           checkTorrent.infohash = checkTorrent.infoHash
           checkTorrent.id = checkTorrent.infoHash
+          checkTorrent.dir = folderPath
           await this.resOrRej(this.db.put(`${this._fixed.load}${this._fixed.infohash}${checkTorrent.infohash}`, {id: checkTorrent.id, size: checkTorrent.length, length: checkTorrent.files.length, infohash: checkTorrent.infohash, name: checkTorrent.name, dir: checkTorrent.dir}), true)
           checkTorrent.folder = folderPath
           checkTorrent.address = null
@@ -428,9 +429,10 @@ export default class Torrentz extends EventEmitter {
           checkTorrent.id = checkTorrent.address
           checkTorrent.msg = null
           checkTorrent.infohash = null
-          await this.resOrRej(this.db.put(`${this._fixed.load}${this._fixed.address}${checkTorrent.address}`, {id: checkTorrent.id, size: checkTorrent.length, length: checkTorrent.files.length, address: checkTorrent.address, infohash: checkTorrent.infohash, name: checkTorrent.name}), true)
+          checkTorrent.dir = folderPath
+          checkTorrent.subdir = dataPath
+          await this.resOrRej(this.db.put(`${this._fixed.load}${this._fixed.address}${checkTorrent.address}`, {dir: checkTorrent.dir, subdir: checkTorrent.subdir, id: checkTorrent.id, size: checkTorrent.length, length: checkTorrent.files.length, address: checkTorrent.address, infohash: checkTorrent.infohash, name: checkTorrent.name}), true)
           checkTorrent.own = false
-          checkTorrent.dir = null
           checkTorrent.files.forEach(file => { file.urlPath = file.path.slice(checkTorrent.name.length).replace(/\\/g, '/') })
           checkTorrent.record = checkProperty
           checkTorrent.complete = true
@@ -1108,5 +1110,39 @@ export default class Torrentz extends EventEmitter {
         }
       })
     })
+  }
+
+  async clearTorrents(){
+    const arr = []
+    for(const [key, value] of this.checkId.entries()){
+      if(!value.own){
+        arr.push(key)
+      }
+    }
+    for(const i of arr){
+      await this.stopTorrent(i)
+      this.checkId.delete(i)
+    }
+  }
+
+  async clearDatas(){
+    const arr = []
+    for(const [key, value] of this.checkId.entries()){
+      if(!value.own){
+        arr.push(key)
+      }
+    }
+    for(const i of arr){
+      await this.stopTorrent(i)
+      this.checkId.delete(i)
+    }
+    for await (const [k, v] of this.db.iterator()){
+      if(k.startsWith(this._fixed.load)){
+        if(fs.pathExists(v.dir)){
+          await fs.remove(v.dir)
+        }
+        await this.db.del(key)
+      }
+    }
   }
 }
