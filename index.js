@@ -941,7 +941,10 @@ export default class Torrentz extends EventEmitter {
           wire.ut_msg.on('msg', torrent.onData)
         }
         torrent.on('wire', torrent.extendTheWire)
-        torrent.say = (message, id) => {
+        torrent.allUsers = () => {
+          return torrent.wires.filter((data) => {return data.ut_msg}).map((data) => {return data.ut_msg.address})
+        }
+        torrent.say = (message, id = null) => {
           if(id){
             torrent.wires.forEach((data) => {
               if(data.ut_msg.address === id){
@@ -982,12 +985,23 @@ export default class Torrentz extends EventEmitter {
           wire.ut_msg.on('msg', torrent.onData)
         }
         torrent.on('wire', torrent.extendTheWire)
-        torrent.say = (message) => {
-          torrent.wires.forEach((data) => {
-            if(data.ut_msg){
-              data.ut_msg.send(message)
-            }
-          })
+        torrent.allUsers = () => {
+          return torrent.wires.filter((data) => {return data.ut_msg}).map((data) => {return data.ut_msg.address})
+        }
+        torrent.say = (message, id = null) => {
+          if(id){
+            torrent.wires.forEach((data) => {
+              if(data.ut_msg.address === id){
+                data.ut_msg.send(message)
+              }
+            })
+          } else {
+            torrent.wires.forEach((data) => {
+              if(data.ut_msg){
+                data.ut_msg.send(message)
+              }
+            })
+          }
         }
         resolve(torrent)
       })
