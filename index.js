@@ -931,7 +931,7 @@ export default class Torrentz extends EventEmitter {
         torrent.say = (message, id = null) => {
           if(id){
             torrent.wires.forEach((data) => {
-              if(data.ut_msg.address === id){
+              if(data.ut_msg && data.ut_msg.address === id){
                 data.ut_msg.send(message)
               }
             })
@@ -975,7 +975,7 @@ export default class Torrentz extends EventEmitter {
         torrent.say = (message, id = null) => {
           if(id){
             torrent.wires.forEach((data) => {
-              if(data.ut_msg.address === id){
+              if(data.ut_msg && data.ut_msg.address === id){
                 data.ut_msg.send(message)
               }
             })
