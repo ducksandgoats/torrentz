@@ -909,11 +909,8 @@ export default class Torrentz extends EventEmitter {
         torrent.onData = (id, buf) => {
           try {
             if(buf.includes(58)){
-              const i = buf.indexOf(58)
-              if(!isNaN(buf.subarray(0, i).toString())){
-                buf = {user: id, data: buf.subarray(i + 1)}
-                // buf = Buffer.concat([Buffer.from(id), buf.subarray(i)])
-              }
+              // const i = buf.indexOf(58)
+              buf = {user: id, data: buf.subarray(buf.indexOf(58) + 1)}
             }
           } catch (e) {
             console.error(e)
@@ -953,11 +950,8 @@ export default class Torrentz extends EventEmitter {
         torrent.onData = (id, buf) => {
           try {
             if(buf.includes(58)){
-              const i = buf.indexOf(58)
-              if(!isNaN(buf.subarray(0, i).toString())){
-                buf = {user: id, data: buf.subarray(i + 1)}
-                // buf = Buffer.concat([Buffer.from(id), buf.subarray(i)])
-              }
+              // const i = buf.indexOf(58)
+              buf = {user: id, data: buf.subarray(buf.indexOf(58) + 1)}
             }
           } catch (e) {
             console.error(e)
