@@ -933,7 +933,9 @@ export default class Torrentz extends EventEmitter {
                   data.ut_msg.send(message)
                 }
               } catch (error) {
-                console.error(error)
+                if(error.message !== 'Unrecognized extension: ut_msg'){
+                  console.error(error)
+                }
               }
             })
           } else {
@@ -943,7 +945,9 @@ export default class Torrentz extends EventEmitter {
                   data.ut_msg.send(message)
                 }
               } catch (error) {
-                console.error(error)
+                if(error.message !== 'Unrecognized extension: ut_msg'){
+                  console.error(error)
+                }
               }
             })
           }
@@ -982,7 +986,9 @@ export default class Torrentz extends EventEmitter {
                   data.ut_msg.send(message)
                 }
               } catch (error) {
-                console.error(error)
+                if(error.message !== 'Unrecognized extension: ut_msg'){
+                  console.error(error)
+                }
               }
             })
           } else {
@@ -992,7 +998,9 @@ export default class Torrentz extends EventEmitter {
                   data.ut_msg.send(message)
                 }
               } catch (error) {
-                console.error(error)
+                if(error.message !== 'Unrecognized extension: ut_msg'){
+                  console.error(error)
+                }
               }
             })
           }
