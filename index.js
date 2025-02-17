@@ -928,14 +928,22 @@ export default class Torrentz extends EventEmitter {
         torrent.say = (message, id = null) => {
           if(id){
             torrent.wires.forEach((data) => {
-              if(data.ut_msg && data.ut_msg.address === id){
-                data.ut_msg.send(message)
+              try {
+                if(data.ut_msg && data.ut_msg.address === id){
+                  data.ut_msg.send(message)
+                }
+              } catch (error) {
+                console.error(error)
               }
             })
           } else {
             torrent.wires.forEach((data) => {
-              if(data.ut_msg){
-                data.ut_msg.send(message)
+              try {
+                if(data.ut_msg){
+                  data.ut_msg.send(message)
+                }
+              } catch (error) {
+                console.error(error)
               }
             })
           }
@@ -969,14 +977,22 @@ export default class Torrentz extends EventEmitter {
         torrent.say = (message, id = null) => {
           if(id){
             torrent.wires.forEach((data) => {
-              if(data.ut_msg && data.ut_msg.address === id){
-                data.ut_msg.send(message)
+              try {
+                if(data.ut_msg && data.ut_msg.address === id){
+                  data.ut_msg.send(message)
+                }
+              } catch (error) {
+                console.error(error)
               }
             })
           } else {
             torrent.wires.forEach((data) => {
-              if(data.ut_msg){
-                data.ut_msg.send(message)
+              try {
+                if(data.ut_msg){
+                  data.ut_msg.send(message)
+                }
+              } catch (error) {
+                console.error(error)
               }
             })
           }
