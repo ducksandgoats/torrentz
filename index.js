@@ -908,10 +908,7 @@ export default class Torrentz extends EventEmitter {
       this.webtorrent.add(id, opts, torrent => {
         torrent.onData = (id, buf) => {
           try {
-            if(buf.includes(58)){
-              // const i = buf.indexOf(58)
-              buf = {user: id, data: buf.subarray(buf.indexOf(58) + 1)}
-            }
+            buf = {user: id, data: buf.subarray(buf.indexOf(58) + 1)}
           } catch (e) {
             console.error(e)
           }
@@ -961,10 +958,7 @@ export default class Torrentz extends EventEmitter {
       this.webtorrent.seed(folder, opts, torrent => {
         torrent.onData = (id, buf) => {
           try {
-            if(buf.includes(58)){
-              // const i = buf.indexOf(58)
-              buf = {user: id, data: buf.subarray(buf.indexOf(58) + 1)}
-            }
+            buf = {user: id, data: buf.subarray(buf.indexOf(58) + 1)}
           } catch (e) {
             console.error(e)
           }
