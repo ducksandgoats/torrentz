@@ -906,11 +906,11 @@ export default class Torrentz extends EventEmitter {
   midTorrent(id, opts){
     return new Promise((resolve, reject) => {
       this.webtorrent.add(id, opts, torrent => {
-        torrent.onData = (id, buf) => {
+        torrent.onData = (nick, buf) => {
           try {
-            buf = {user: id, data: buf.subarray(buf.indexOf(58) + 1)}
-          } catch (e) {
-            console.error(e)
+            buf = {user: nick, data: buf.subarray(buf.indexOf(58) + 1)}
+          } catch {
+            buf = {user: nick, data: buf}
           }
           torrent.emit('msg', buf)
         }
@@ -956,11 +956,11 @@ export default class Torrentz extends EventEmitter {
   startTorrent(folder, opts){
     return new Promise((resolve, reject) => {
       this.webtorrent.seed(folder, opts, torrent => {
-        torrent.onData = (id, buf) => {
+        torrent.onData = (nick, buf) => {
           try {
-            buf = {user: id, data: buf.subarray(buf.indexOf(58) + 1)}
-          } catch (e) {
-            console.error(e)
+            buf = {user: nick, data: buf.subarray(buf.indexOf(58) + 1)}
+          } catch {
+            buf = {user: nick, data: buf}
           }
           torrent.emit('msg', buf)
         }
