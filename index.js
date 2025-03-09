@@ -907,12 +907,8 @@ export default class Torrentz extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.webtorrent.add(id, opts, torrent => {
         torrent.onData = (nick, buf) => {
-          try {
-            buf = {nick, data: buf.subarray(buf.indexOf(58) + 1)}
-          } catch {
-            buf = {nick, data: buf}
-          }
-          torrent.emit('msg', buf)
+          const i = buf.indexOf(58)
+          torrent.emit('msg', {nick, data: i > -1 ? buf.subarray(i + 1) : buf})
         }
         torrent.extendTheWire = (wire, addr) => {
           wire.use(ut_msg(crypto.createHash('sha1').update(addr).digest('hex')))
@@ -957,12 +953,8 @@ export default class Torrentz extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.webtorrent.seed(folder, opts, torrent => {
         torrent.onData = (nick, buf) => {
-          try {
-            buf = {nick, data: buf.subarray(buf.indexOf(58) + 1)}
-          } catch {
-            buf = {nick, data: buf}
-          }
-          torrent.emit('msg', buf)
+          const i = buf.indexOf(58)
+          torrent.emit('msg', {nick, data: i > -1 ? buf.subarray(i + 1) : buf})
         }
         torrent.extendTheWire = (wire, addr) => {
           wire.use(ut_msg(crypto.createHash('sha1').update(addr).digest('hex')))
