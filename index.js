@@ -851,12 +851,119 @@ export default class Torrentz extends EventEmitter {
     })
     return parseTorrent(test)
   }
+  async echoTorrent(info, pathToData, opts){
+    if(opts.buf){
+      opts.buf = info
+      info = ''
+    }
+
+    if(this.checkHash.test(info)){
+      if(this.checkId.has(info)){
+        this.checkId.delete(info)
+      }
+  
+      const activeTorrent = await this.resOrRej(this.stopTorrent(info, { destroyStore: false }), true)
+
+      const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.infohash}${info}`), false)
+      if(authorStuff){
+        throw new Error("you must echo another user's torrent")
+      } else {
+        const nfoData = await this.db.get(`${this._fixed.load}${this._fixed.infohash}${info}`)
+        const folderPath = path.join(this._storage, nfoData.infohash)
+  
+        if(!await fs.pathExists(folderPath)){
+          throw new Error('did not find any torrent data to delete')
+        }
+  
+        if(pathToData === '/'){
+          const dirPath = path.join(folderPath, nfoData.name)
+          if (!await fs.pathExists(dirPath)) {
+            throw new Error('path is invalid')
+          }
+          if(!(await this.getAllFiles('**/*', {cwd: dirPath, strict: false, nodir: true})).length){
+            await fs.remove(folderPath)
+            await this.db.del(`${this._fixed.load}${this._fixed.infohash}${nfoData.infohash}`)
+            throw new Error('torrent can not be empty')
+          }
+          const testData = await this.echoHash(nfoData.infohash, folderPath, dirPath)
+          return {id: info, path: pathToData, ...testData, activeTorrent}
+        } else {
+          const dirPath = path.join(folderPath, nfoData.name)
+          const testPath = path.join(dirPath, pathToData)
+          if (await fs.pathExists(testPath)) {
+            await fs.remove(testPath)
+          } else {
+            throw new Error('path is invalid')
+          }
+          if(!(await this.getAllFiles('**/*', {cwd: dirPath, strict: false, nodir: true})).length){
+            await fs.remove(folderPath)
+            await this.db.del(`${this._fixed.load}${this._fixed.infohash}${nfoData.infohash}`)
+            throw new Error('torrent can not be empty')
+          }
+          const testData = await this.echoHash(nfoData.infohash, folderPath, dirPath)
+          return {id: info, path: pathToData, ...testData, activeTorrent}
+        }
+      }
+    } else if(this.checkAddress.test(info)){
+      if(this.checkId.has(info)){
+        this.checkId.delete(info)
+      }
+      const activeTorrent = await this.resOrRej(this.stopTorrent(info, { destroyStore: false }), true)
+
+      const authorStuff = await this.resOrRej(this.db.get(`${this._fixed.seed}${this._fixed.address}${info}`), false)
+      if(authorStuff){
+        throw new Error("you must echo another user's torrent")
+      } else {
+        const nfoData = await this.db.get(`${this._fixed.load}${this._fixed.address}${info}`)
+        const folderPath = path.join(this._storage, nfoData.address)
+  
+        if(!await fs.pathExists(folderPath)){
+          throw new Error('did not find any torrent data to delete')
+        }
+  
+        if(pathToData === '/'){
+          const mainPath = path.join(folderPath, nfoData.infohash)
+          const dataPath = path.join(mainPath, nfoData.name)
+          const testPath = path.join(dataPath, pathToData)
+          if (!await fs.pathExists(testPath)) {
+            throw new Error('path is invalid')
+          }
+          if(!(await this.getAllFiles('**/*', {cwd: dataPath, strict: false, nodir: true})).length){
+            await fs.remove(folderPath)
+            await this.db.del(`${this._fixed.load}${this._fixed.address}${nfoData.address}`)
+            throw new Error('torrent can not be empty')
+          }
+          const testData = await this.echoAddress(nfoData.address, folderPath, dataPath)
+          return {id: info, path: pathToData, ...testData, activeTorrent}
+        } else {
+          const mainPath = path.join(folderPath, nfoData.infohash)
+          const dataPath = path.join(mainPath, nfoData.name)
+          const testPath = path.join(dataPath, pathToData)
+          if (await fs.pathExists(testPath)) {
+            await fs.remove(testPath)
+          } else {
+            throw new Error('path is invalid')
+          }
+          if(!(await this.getAllFiles('**/*', {cwd: dataPath, strict: false, nodir: true})).length){
+            await fs.remove(folderPath)
+            await this.db.del(`${this._fixed.load}${this._fixed.address}${nfoData.address}`)
+            throw new Error('torrent can not be empty')
+          }
+          const testData = await this.echoAddress(nfoData.address, folderPath, dataPath)
+          return {id: info, path: pathToData, ...testData, activeTorrent}
+        }
+      }
+    } else {
+      throw new Error('id must be an infohash or an address')
+    }
+  }
   async echoAddress(id, folderPath, mainPath, opts) {
     if (!opts) {
       opts = {}
     }
     const dir = uid(20)
     const dirPath = path.join(this._storage, dir)
+    await fs.writeFile(path.join(dirPath, 'torrentz.txt'), crypto.createHash('sha1').update(Buffer.from(crypto.randomUUID(), 'hex')).digest('hex'))
     await fs.ensureDir(dirPath)
     await fs.copy(mainPath, dirPath, {overwrite: true})
     await fs.remove(folderPath)
@@ -886,6 +993,7 @@ export default class Torrentz extends EventEmitter {
     const descripPath = opts.desc || {}
     const dir = uid(20)
     const dirPath = path.join(this._storage, dir)
+    await fs.writeFile(path.join(dirPath, 'torrentz.txt'), crypto.createHash('sha1').update(Buffer.from(crypto.randomUUID(), 'hex')).digest('hex'))
     await fs.ensureDir(dirPath)
     await fs.copy(movePath, dirPath, { overwrite: true })
     await fs.remove(folderPath)
