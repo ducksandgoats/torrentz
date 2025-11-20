@@ -526,7 +526,7 @@ export default class Torrentz extends EventEmitter {
   async publishTorrent(id, iden = {}, pathToData, data, opts = {}){
     if(iden.kind === false || this.checkHash.test(id)){
 
-      const authorStuff = id ? await (async () => {try {await this.takeOutTorrent(id, { destroyStore: false });return await this.db.get(`${this._fixed.seed}${this._fixed.infohash}${id}`);}catch{return null}})() : {id, infohash: null, dir: uid(20), desc: {}}
+      const authorStuff = this.checkHash.test(id) ? await (async () => {try {await this.takeOutTorrent(id, { destroyStore: false });return await this.db.get(`${this._fixed.seed}${this._fixed.infohash}${id}`);}catch{return null}})() : {id, infohash: null, dir: uid(20), desc: {}}
 
       if(authorStuff){
         const folderPath = path.join(this._storage, authorStuff.dir)
@@ -588,7 +588,7 @@ export default class Torrentz extends EventEmitter {
       }
     } else if (iden.kind === true || this.checkAddress.test(id)) {
 
-      const authorStuff = id ? await (async () => {try{await this.takeOutTorrent(id, { destroyStore: false });let test = await this.db.get(`${this._fixed.seed}${this._fixed.address}${id}`);test.sequence = test.sequence + 1;return test;}catch{return null}})() : await (async () => {let testPair = this.createKeypair(); id = testPair.address; iden.extra = testPair.secret; iden.seed = testPair.seed;})()
+      const authorStuff = this.checkAddress.test(id) ? await (async () => {try{await this.takeOutTorrent(id, { destroyStore: false });let test = await this.db.get(`${this._fixed.seed}${this._fixed.address}${id}`);test.sequence = test.sequence + 1;return test;}catch{return null}})() : await (async () => {let testPair = this.createKeypair(); id = testPair.address; iden.extra = testPair.secret; iden.seed = testPair.seed;})()
 
       if(authorStuff){
         const folderPath = path.join(this._storage, authorStuff.dir)
