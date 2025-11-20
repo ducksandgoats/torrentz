@@ -560,7 +560,7 @@ export default class Torrentz extends EventEmitter {
           return { path: pathToData, ...authorStuff, saved }
         }
       } else {
-        const nfoData = await this.db.get(`${this._fixed.load}${this._fixed.infohash}${info}`)
+        const nfoData = await this.db.get(`${this._fixed.load}${this._fixed.infohash}${id}`)
         const folderPath = path.join(this._storage, nfoData.infohash)
   
         if(!await fs.pathExists(folderPath)){
@@ -577,7 +577,7 @@ export default class Torrentz extends EventEmitter {
             throw new Error('path is invalid')
           }
         }
-        opts.txt = JSON.stringify(Array.isArray(data) ? await this.handleFormData(dataPath, data, pathToData) : await this.handleRegData(dataPath, data, pathToData))
+        opts.txt = data ? JSON.stringify(Array.isArray(data) ? await this.handleFormData(dataPath, data, pathToData) : await this.handleRegData(dataPath, data, pathToData)) : null
         if(!(await this.getAllFiles('**/*', {cwd: dirPath, strict: false, nodir: true})).length){
           await fs.remove(folderPath)
           await this.db.del(`${this._fixed.load}${this._fixed.infohash}${nfoData.infohash}`)
@@ -623,7 +623,7 @@ export default class Torrentz extends EventEmitter {
           return {secret: iden.extra || null, seed: iden.seed || null, address: id, path: pathToData, ...checkProperty, saved}
         }
       } else {
-        const nfoData = await this.db.get(`${this._fixed.load}${this._fixed.address}${info}`)
+        const nfoData = await this.db.get(`${this._fixed.load}${this._fixed.address}${id}`)
         const folderPath = path.join(this._storage, nfoData.address)
   
         if(!await fs.pathExists(folderPath)){
@@ -641,7 +641,7 @@ export default class Torrentz extends EventEmitter {
             throw new Error('path is invalid')
           }
         }
-        opts.txt = JSON.stringify(Array.isArray(data) ? await this.handleFormData(dataPath, data, pathToData) : await this.handleRegData(dataPath, data, pathToData))
+        opts.txt = data ? JSON.stringify(Array.isArray(data) ? await this.handleFormData(dataPath, data, pathToData) : await this.handleRegData(dataPath, data, pathToData)) : null
         if(!(await this.getAllFiles('**/*', {cwd: dataPath, strict: false, nodir: true})).length){
           await fs.remove(folderPath)
           await this.db.del(`${this._fixed.load}${this._fixed.address}${nfoData.address}`)
