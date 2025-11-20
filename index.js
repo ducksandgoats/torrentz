@@ -536,7 +536,7 @@ export default class Torrentz extends EventEmitter {
         const dataPath = path.join(folderPath, pathToData)
         authorStuff.desc = opts.desc || authorStuff.desc
         
-        const saved = Array.isArray(data) ? await this.handleFormData(dataPath, data, pathToData) : await this.handleRegData(dataPath, data, pathToData)
+        const saved = data ? Array.isArray(data) ? await this.handleFormData(dataPath, data, pathToData) : await this.handleRegData(dataPath, data, pathToData) : ''
 
         const checkTorrent = await this.resOrRej(this.dataFromTorrent(folderPath, authorStuff.desc), true)
 
@@ -600,7 +600,7 @@ export default class Torrentz extends EventEmitter {
         authorStuff.desc = opts.desc || authorStuff.desc
         authorStuff.stuff = opts.stuff || authorStuff.stuff
 
-        const saved = Array.isArray(data) ? await this.handleFormData(dataPath, data, pathToData) : await this.handleRegData(dataPath, data, pathToData)
+        const saved = data ? Array.isArray(data) ? await this.handleFormData(dataPath, data, pathToData) : await this.handleRegData(dataPath, data, pathToData) : ''
 
         const checkTorrent = await this.resOrRej(this.dataFromTorrent(folderPath, authorStuff.desc), true)
 
