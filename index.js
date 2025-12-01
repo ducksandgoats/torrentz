@@ -28,13 +28,13 @@ export default class Torrentz extends EventEmitter {
     this.checkAddress = /^[a-fA-F0-9]{64}$/
 
     finalOpts.dir = path.resolve(finalOpts.dir)
-    this._storage = path.join(finalOpts.dir, finalOpts.storage)
-    this._base = path.join(finalOpts.dir, finalOpts.base)
+    this._storage = finalOpts.level ? finalOpts.dir : path.join(finalOpts.dir, finalOpts.storage)
+    this._base = finalOpts.level ? null : path.join(finalOpts.dir, finalOpts.base)
     fs.ensureDirSync(this._storage)
     fs.ensureDirSync(this._base)
 
     // this.webtorrent = finalOpts.webtorrent ? finalOpts.webtorrent : new WebTorrent({ dht: { verify: ed.verify }, tracker: {wrtc} })
-    this.db = finalOpts.leveldb || new Level(this._base, { valueEncoding: 'json' })
+    this.db = finalOpts.level || new Level(this._base, { valueEncoding: 'json' })
     this.webtorrent = finalOpts.webtorrent || new WebTorrent({ ...finalOpts })
     // this.webtorrent = new WebTorrent({ ...finalOpts, dht: { verify: ed.verify } })
 
